@@ -6,7 +6,7 @@
 // ================= HELPERS =================
 
 void Draw8Points(HDC hdc, int xc, int yc, int x, int y, COLORREF c);
-
+//void DrawHermiteCurve(HDC hdc, Point P0, Point T0,Point P1, Point T1,int numPoints, COLORREF c);
 // ================= LINES =================
 
 void LineDDA(HDC hdc, Point p1, Point p2, COLORREF c);
@@ -37,8 +37,7 @@ void EllipseMidpoint(HDC hdc, Point center, int a, int b, COLORREF c);
 
 // ================= CURVES =================
 
-void CardinalSpline(HDC hdc, vector<Point> points, COLORREF c);
-
+void DrawCardinalSpline(HDC hdc, const vector<Point>& pts, float tension, COLORREF c);
 // ================= FILLING =================
 
 void FillCircleWithLines(HDC hdc, Point center, int r, int quarter, COLORREF c);
@@ -75,6 +74,4 @@ void CirclePointClipping(HDC hdc, Point p, Point center, int r);
 
 void CircleLineClipping(HDC hdc, Point p1, Point p2, Point center, int r);
 
-void DrawHappyFace(HDC hdc, Point center, int r);
-
-void DrawSadFace(HDC hdc, Point center, int r);
+void DrawFace(HDC hdc, Point center, int r, MouthType type, COLORREF c);

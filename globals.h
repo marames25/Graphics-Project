@@ -17,7 +17,11 @@ struct Point
         y = b;
     }
 };
-
+enum MouthType
+{
+    HAPPY = 0,
+    SAD = 1
+};
 // ================= DRAW MODES =================
 enum Mode
 {
@@ -33,7 +37,7 @@ enum Mode
     CIRCLE_POLAR,
     CIRCLE_ITERATIVE_POLAR,
     CIRCLE_MIDPOINT,
-    CIRCLE_MODIFIED_MIDPOINT,
+    CIRCLE_MODIFIED,
 
     // ================= ELLIPSE =================
     ELLIPSE_DIRECT,

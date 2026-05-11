@@ -27,7 +27,14 @@ void ClearScreen(HWND hwnd)
 #define IDM_PARAMETRIC 12
 
 // Circles
-#define IDM_CIRCLE_MIDPOINT 20
+#define IDM_CIRCLE_DIRECT 20
+#define IDM_CIRCLE_POLAR 21
+#define IDM_CIRCLE_ITERATIVE 22
+#define IDM_CIRCLE_MIDPOINT 23
+#define IDM_CIRCLE_MODIFIED 24
+
+// Curves
+#define IDM_CARDINAL 40
 
 // Faces
 #define IDM_HAPPY 30
@@ -44,15 +51,25 @@ void AddMenus(HWND hwnd)
     AppendMenu(hLines, MF_STRING, IDM_PARAMETRIC, "Parametric");
 
     HMENU hCircle = CreateMenu();
+    AppendMenu(hCircle, MF_STRING, IDM_CIRCLE_DIRECT, "Direct Circle");
+    AppendMenu(hCircle, MF_STRING, IDM_CIRCLE_POLAR, "Polar Circle");
+    AppendMenu(hCircle, MF_STRING, IDM_CIRCLE_ITERATIVE, "Iterative Polar");
     AppendMenu(hCircle, MF_STRING, IDM_CIRCLE_MIDPOINT, "Midpoint Circle");
+    AppendMenu(hCircle, MF_STRING, IDM_CIRCLE_MODIFIED, "Modified Midpoint");
+
+    HMENU hCurves = CreateMenu();
+    AppendMenu(hCurves, MF_STRING, IDM_CARDINAL, "Cardinal Spline");
+
 
     HMENU hFace = CreateMenu();
-    AppendMenu(hFace, MF_STRING, IDM_HAPPY, "Happy Face");
-    AppendMenu(hFace, MF_STRING, IDM_SAD, "Sad Face");
+    AppendMenu(hFace, MF_STRING, IDM_HAPPY, "Sad Face");
+    AppendMenu(hFace, MF_STRING, IDM_SAD, "Happy Face");
 
     AppendMenu(menu, MF_POPUP, (UINT_PTR)hLines, "Lines");
     AppendMenu(menu, MF_POPUP, (UINT_PTR)hCircle, "Circles");
     AppendMenu(menu, MF_POPUP, (UINT_PTR)hFace, "Faces");
+    AppendMenu(menu, MF_POPUP, (UINT_PTR)hCurves, "Curves");
+
 
     AppendMenu(menu, MF_STRING, IDM_CLEAR, "Clear Screen");
 
@@ -87,8 +104,29 @@ LRESULT CALLBACK WindowProcedure(HWND hwnd, UINT msg, WPARAM wp, LPARAM lp)
                     CurrentMode = LINE_PARAMETRIC;
                     break;
 
+                case IDM_CIRCLE_DIRECT:
+                    CurrentMode = CIRCLE_DIRECT;
+                    break;
+
+                case IDM_CIRCLE_POLAR:
+                    CurrentMode = CIRCLE_POLAR;
+                    break;
+
+                case IDM_CIRCLE_ITERATIVE:
+                    CurrentMode = CIRCLE_ITERATIVE_POLAR;
+                    break;
+
                 case IDM_CIRCLE_MIDPOINT:
                     CurrentMode = CIRCLE_MIDPOINT;
+                    break;
+
+                case IDM_CIRCLE_MODIFIED:
+                    CurrentMode = CIRCLE_MODIFIED;
+                    break;
+
+                case IDM_CARDINAL:
+                    CurrentMode = CARDINAL_SPLINE;
+                    TempPoints.clear();
                     break;
 
                 case IDM_HAPPY:
@@ -104,51 +142,85 @@ LRESULT CALLBACK WindowProcedure(HWND hwnd, UINT msg, WPARAM wp, LPARAM lp)
 
             // ================= MOUSE DRAW =================
         case WM_LBUTTONDOWN:
-        {
-            TempPoints.push_back(Point(LOWORD(lp), HIWORD(lp)));
-
-            if (TempPoints.size() == 2)
             {
-                Point p1 = TempPoints[0];
-                Point p2 = TempPoints[1];
+                TempPoints.push_back(Point(LOWORD(lp), HIWORD(lp)));
 
-                switch(CurrentMode)
+                HDC hdc = GetDC(hwnd);
+
+                // ================= SPLINE (multi-point) =================
+                if (CurrentMode == CARDINAL_SPLINE)
                 {
-                    case LINE_DDA:
-                        LineDDA(hdc, p1, p2, CurrentColor);
-                        break;
-
-                    case LINE_MIDPOINT:
-                        LineMidpoint(hdc, p1, p2, CurrentColor);
-                        break;
-
-                    case LINE_PARAMETRIC:
-                        LineParametric(hdc, p1, p2, CurrentColor);
-                        break;
-
-                    case CIRCLE_MIDPOINT:
+                    if (TempPoints.size() >= 4)
                     {
-                        int dx = p2.x - p1.x;
-                        int dy = p2.y - p1.y;
-                        int r = (int)sqrt(dx*dx + dy*dy);
-
-                        CircleMidpoint(hdc, p1, r, CurrentColor);
-                        break;
+                        DrawCardinalSpline(hdc, TempPoints, 0.5f, CurrentColor);
+                        TempPoints.clear();
                     }
 
-                    case HAPPY_FACE:
-                        DrawHappyFace(hdc, p1, 50);
-                        break;
-
-                    case SAD_FACE:
-                        DrawSadFace(hdc, p1, 50);
-                        break;
+                    ReleaseDC(hwnd, hdc);
+                    break;
                 }
 
-                TempPoints.clear();
+                // ================= 2-POINT MODES =================
+                if (TempPoints.size() == 2)
+                {
+                    Point p1 = TempPoints[0];
+                    Point p2 = TempPoints[1];
+
+                    int dx = p2.x - p1.x;
+                    int dy = p2.y - p1.y;
+
+                    switch (CurrentMode)
+                    {
+                        // ===== LINES =====
+                        case LINE_DDA:
+                            LineDDA(hdc, p1, p2, CurrentColor);
+                            break;
+
+                        case LINE_MIDPOINT:
+                            LineMidpoint(hdc, p1, p2, CurrentColor);
+                            break;
+
+                        case LINE_PARAMETRIC:
+                            LineParametric(hdc, p1, p2, CurrentColor);
+                            break;
+
+                            // ===== CIRCLES =====
+                        case CIRCLE_DIRECT:
+                            CircleDirect(hdc, p1, sqrt(dx*dx + dy*dy), CurrentColor);
+                            break;
+
+                        case CIRCLE_POLAR:
+                            CirclePolar(hdc, p1, sqrt(dx*dx + dy*dy), CurrentColor);
+                            break;
+
+                        case CIRCLE_ITERATIVE_POLAR:
+                            CircleIterativePolar(hdc, p1, sqrt(dx*dx + dy*dy), CurrentColor);
+                            break;
+
+                        case CIRCLE_MIDPOINT:
+                            CircleMidpoint(hdc, p1, sqrt(dx*dx + dy*dy), CurrentColor);
+                            break;
+
+                        case CIRCLE_MODIFIED:
+                            CircleModifiedMidpoint(hdc, p1, sqrt(dx*dx + dy*dy), CurrentColor);
+                            break;
+
+                            // ===== FACES =====
+                        case HAPPY_FACE:
+                            DrawFace(hdc, p1, sqrt(dx*dx + dy*dy), HAPPY, CurrentColor);
+                            break;
+
+                        case SAD_FACE:
+                            DrawFace(hdc, p1, sqrt(dx*dx + dy*dy), SAD, CurrentColor);
+                            break;
+                    }
+
+                    TempPoints.clear();
+                }
+
+                ReleaseDC(hwnd, hdc);
+                break;
             }
-            break;
-        }
 
             // ================= EXIT =================
         case WM_DESTROY:
