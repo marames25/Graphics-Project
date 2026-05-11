@@ -1,0 +1,50 @@
+# CMake build folders
+cmake-build-*/
+build/
+out/
+bin/
+obj/
+
+# CLion / JetBrains IDEs
+.idea/
+*.iml
+*.iws
+
+# VS Code
+.vscode/
+
+# Visual Studio
+.vs/
+*.vcxproj*
+*.sln
+*.user
+Debug/
+Release/
+x64/
+x86/
+
+# Compiled files
+*.o
+*.obj
+*.exe
+*.out
+*.app
+
+# CMake generated files
+CMakeFiles/
+CMakeCache.txt
+cmake_install.cmake
+Makefile
+
+# Logs and temp files
+*.log
+*.tmp
+*.temp
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# Precompiled headers
+*.gch
+*.pch
