@@ -1,0 +1,3 @@
+F:/3rd year 2nd term/Graphics/Project/cmake-build-debug/CMakeFiles/Project.dir
+F:/3rd year 2nd term/Graphics/Project/cmake-build-debug/CMakeFiles/edit_cache.dir
+F:/3rd year 2nd term/Graphics/Project/cmake-build-debug/CMakeFiles/rebuild_cache.dir
