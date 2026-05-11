@@ -1,91 +1,80 @@
 #include <windows.h>
-#include <bits/stdc++.h>
+#include <vector>
+#include <cmath>
+
 #include "globals.h"
 #include "Algorithms.h"
+
 using namespace std;
 
-
-
+// ================= GLOBAL DEFINITIONS =================
 Mode CurrentMode = NONE;
-COLORREF CurrentColor = RGB(255,0,0);
-
+COLORREF CurrentColor = RGB(255, 0, 0);
 vector<Point> TempPoints;
 
-LRESULT CALLBACK WindowProcedure(HWND, UINT, WPARAM, LPARAM);
+// ================= HELPERS =================
+void ClearScreen(HWND hwnd)
+{
+    InvalidateRect(hwnd, NULL, TRUE);
+}
 
-#define IDM_DDA 1
-#define IDM_MIDPOINT 2
-#define IDM_PARAMETRIC 3
-#define IDM_CIRCLE 4
+// ================= MENU IDS =================
+#define IDM_CLEAR 1
 
+// Lines
+#define IDM_DDA 10
+#define IDM_MIDPOINT 11
+#define IDM_PARAMETRIC 12
+
+// Circles
+#define IDM_CIRCLE_MIDPOINT 20
+
+// Faces
+#define IDM_HAPPY 30
+#define IDM_SAD 31
+
+// ================= MENU CREATION =================
 void AddMenus(HWND hwnd)
 {
-    HMENU hMenu = CreateMenu();
+    HMENU menu = CreateMenu();
 
     HMENU hLines = CreateMenu();
-    HMENU hCircles = CreateMenu();
-
     AppendMenu(hLines, MF_STRING, IDM_DDA, "DDA");
     AppendMenu(hLines, MF_STRING, IDM_MIDPOINT, "Midpoint");
     AppendMenu(hLines, MF_STRING, IDM_PARAMETRIC, "Parametric");
 
-    AppendMenu(hCircles, MF_STRING, IDM_CIRCLE, "Circle Midpoint");
+    HMENU hCircle = CreateMenu();
+    AppendMenu(hCircle, MF_STRING, IDM_CIRCLE_MIDPOINT, "Midpoint Circle");
 
-    AppendMenu(hMenu, MF_POPUP, (UINT_PTR)hLines, "Lines");
-    AppendMenu(hMenu, MF_POPUP, (UINT_PTR)hCircles, "Circles");
+    HMENU hFace = CreateMenu();
+    AppendMenu(hFace, MF_STRING, IDM_HAPPY, "Happy Face");
+    AppendMenu(hFace, MF_STRING, IDM_SAD, "Sad Face");
 
-    SetMenu(hwnd, hMenu);
+    AppendMenu(menu, MF_POPUP, (UINT_PTR)hLines, "Lines");
+    AppendMenu(menu, MF_POPUP, (UINT_PTR)hCircle, "Circles");
+    AppendMenu(menu, MF_POPUP, (UINT_PTR)hFace, "Faces");
+
+    AppendMenu(menu, MF_STRING, IDM_CLEAR, "Clear Screen");
+
+    SetMenu(hwnd, menu);
 }
 
-int WINAPI WinMain(HINSTANCE hInst, HINSTANCE, LPSTR, int nCmdShow)
-{
-    WNDCLASS wc = {};
-
-    wc.lpszClassName = "Graphics";
-    wc.hInstance = hInst;
-    wc.lpfnWndProc = WindowProcedure;
-    wc.hbrBackground = CreateSolidBrush(RGB(255,255,255));
-
-    RegisterClass(&wc);
-
-    HWND hwnd = CreateWindow(
-            "Graphics",
-            "2D Drawing Package",
-            WS_OVERLAPPEDWINDOW,
-            100,
-            100,
-            1000,
-            700,
-            NULL,
-            NULL,
-            hInst,
-            NULL
-    );
-
-    AddMenus(hwnd);
-
-    ShowWindow(hwnd, nCmdShow);
-
-    MSG msg = {};
-
-    while (GetMessage(&msg, NULL, 0, 0))
-    {
-        TranslateMessage(&msg);
-        DispatchMessage(&msg);
-    }
-
-    return 0;
-}
+// ================= WINDOW PROCEDURE =================
 LRESULT CALLBACK WindowProcedure(HWND hwnd, UINT msg, WPARAM wp, LPARAM lp)
 {
     HDC hdc = GetDC(hwnd);
 
     switch(msg)
     {
+        // ================= MENU =================
         case WM_COMMAND:
-
-            switch(wp)
+        {
+            switch(LOWORD(wp))
             {
+                case IDM_CLEAR:
+                    ClearScreen(hwnd);
+                    break;
+
                 case IDM_DDA:
                     CurrentMode = LINE_DDA;
                     break;
@@ -98,15 +87,24 @@ LRESULT CALLBACK WindowProcedure(HWND hwnd, UINT msg, WPARAM wp, LPARAM lp)
                     CurrentMode = LINE_PARAMETRIC;
                     break;
 
-                case IDM_CIRCLE:
+                case IDM_CIRCLE_MIDPOINT:
                     CurrentMode = CIRCLE_MIDPOINT;
                     break;
+
+                case IDM_HAPPY:
+                    CurrentMode = HAPPY_FACE;
+                    break;
+
+                case IDM_SAD:
+                    CurrentMode = SAD_FACE;
+                    break;
             }
-
             break;
+        }
 
+            // ================= MOUSE DRAW =================
         case WM_LBUTTONDOWN:
-
+        {
             TempPoints.push_back(Point(LOWORD(lp), HIWORD(lp)));
 
             if (TempPoints.size() == 2)
@@ -132,25 +130,65 @@ LRESULT CALLBACK WindowProcedure(HWND hwnd, UINT msg, WPARAM wp, LPARAM lp)
                     {
                         int dx = p2.x - p1.x;
                         int dy = p2.y - p1.y;
-
-                        int r = sqrt(dx*dx + dy*dy);
+                        int r = (int)sqrt(dx*dx + dy*dy);
 
                         CircleMidpoint(hdc, p1, r, CurrentColor);
                         break;
                     }
+
+                    case HAPPY_FACE:
+                        DrawHappyFace(hdc, p1, 50);
+                        break;
+
+                    case SAD_FACE:
+                        DrawSadFace(hdc, p1, 50);
+                        break;
                 }
 
                 TempPoints.clear();
             }
-
             break;
+        }
 
+            // ================= EXIT =================
         case WM_DESTROY:
             PostQuitMessage(0);
             break;
     }
 
     ReleaseDC(hwnd, hdc);
-
     return DefWindowProc(hwnd, msg, wp, lp);
+}
+
+// ================= WINMAIN =================
+int WINAPI WinMain(HINSTANCE hInst, HINSTANCE, LPSTR, int nCmdShow)
+{
+    WNDCLASS wc = {};
+    wc.lpfnWndProc = WindowProcedure;
+    wc.hInstance = hInst;
+    wc.lpszClassName = "DrawingApp";
+    wc.hbrBackground = (HBRUSH)(COLOR_WINDOW + 1);
+
+    RegisterClass(&wc);
+
+    HWND hwnd = CreateWindow(
+            "DrawingApp",
+            "2D Drawing Package",
+            WS_OVERLAPPEDWINDOW,
+            100, 100, 900, 600,
+            NULL, NULL, hInst, NULL
+    );
+
+    AddMenus(hwnd);
+
+    ShowWindow(hwnd, nCmdShow);
+
+    MSG msg = {};
+    while(GetMessage(&msg, NULL, 0, 0))
+    {
+        TranslateMessage(&msg);
+        DispatchMessage(&msg);
+    }
+
+    return 0;
 }

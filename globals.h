@@ -1,12 +1,16 @@
 #pragma once
 #include <windows.h>
 #include <vector>
+
 using namespace std;
 
+// ================= POINT =================
 struct Point
 {
     int x, y;
+
     Point() {}
+
     Point(int a, int b)
     {
         x = a;
@@ -14,48 +18,60 @@ struct Point
     }
 };
 
+// ================= DRAW MODES =================
 enum Mode
 {
     NONE,
 
-    // Lines
+    // ================= LINES =================
     LINE_DDA,
     LINE_MIDPOINT,
     LINE_PARAMETRIC,
 
-    // Circles
+    // ================= CIRCLES =================
     CIRCLE_DIRECT,
     CIRCLE_POLAR,
-    CIRCLE_ITERATIVE,
+    CIRCLE_ITERATIVE_POLAR,
     CIRCLE_MIDPOINT,
-    CIRCLE_MODIFIED,
+    CIRCLE_MODIFIED_MIDPOINT,
 
-    // Ellipse
+    // ================= ELLIPSE =================
     ELLIPSE_DIRECT,
     ELLIPSE_POLAR,
     ELLIPSE_MIDPOINT,
 
-    // Curves
+    // ================= CURVES =================
     CARDINAL_SPLINE,
 
-    // Filling
+    // ================= FILLING =================
     FILL_CIRCLE_LINES,
     FILL_CIRCLE_CIRCLES,
     FILL_SQUARE_HERMIT,
     FILL_RECT_BEZIER,
+    CONVEX_FILL,
+    NON_CONVEX_FILL,
     FLOOD_FILL_RECURSIVE,
     FLOOD_FILL_NON_RECURSIVE,
 
-    // Clipping
+    // ================= CLIPPING =================
     CLIP_RECT_POINT,
     CLIP_RECT_LINE,
     CLIP_RECT_POLYGON,
 
     CLIP_SQUARE_POINT,
-    CLIP_SQUARE_LINE
+    CLIP_SQUARE_LINE,
+
+    // ================= BONUS =================
+    CLIP_CIRCLE_POINT,
+    CLIP_CIRCLE_LINE,
+
+    HAPPY_FACE,
+    SAD_FACE
 };
 
+// ================= GLOBAL VARIABLES =================
 extern Mode CurrentMode;
+
 extern COLORREF CurrentColor;
 
 extern vector<Point> TempPoints;
