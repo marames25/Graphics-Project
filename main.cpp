@@ -20,6 +20,8 @@ void ClearScreen(HWND hwnd)
 
 // ================= MENU IDS =================
 #define IDM_CLEAR 1
+#define IDM_SAVE 2
+#define IDM_LOAD 3
 
 // Lines
 #define IDM_DDA 10
@@ -38,6 +40,11 @@ void AddMenus(HWND hwnd)
 {
     HMENU menu = CreateMenu();
 
+    HMENU hFile = CreateMenu();
+    AppendMenu(hFile, MF_STRING, IDM_SAVE, "Save");
+    AppendMenu(hFile, MF_STRING, IDM_LOAD, "Load");
+    AppendMenu(hFile, MF_STRING, IDM_CLEAR, "Clear");
+
     HMENU hLines = CreateMenu();
     AppendMenu(hLines, MF_STRING, IDM_DDA, "DDA");
     AppendMenu(hLines, MF_STRING, IDM_MIDPOINT, "Midpoint");
@@ -50,13 +57,125 @@ void AddMenus(HWND hwnd)
     AppendMenu(hFace, MF_STRING, IDM_HAPPY, "Happy Face");
     AppendMenu(hFace, MF_STRING, IDM_SAD, "Sad Face");
 
+    AppendMenu(menu, MF_POPUP, (UINT_PTR)hFile, "File");
     AppendMenu(menu, MF_POPUP, (UINT_PTR)hLines, "Lines");
     AppendMenu(menu, MF_POPUP, (UINT_PTR)hCircle, "Circles");
     AppendMenu(menu, MF_POPUP, (UINT_PTR)hFace, "Faces");
 
-    AppendMenu(menu, MF_STRING, IDM_CLEAR, "Clear Screen");
-
     SetMenu(hwnd, menu);
+}
+
+// ================= Save & Load BMP Images =================
+void SaveBMP(HWND hwnd, const char* filename)
+{
+    // Get window DC
+    HDC hdcWindow = GetDC(hwnd);
+
+    // Get window size
+    RECT rect;
+    GetClientRect(hwnd, &rect);
+
+    int width = rect.right - rect.left;
+    int height = rect.bottom - rect.top;
+
+    // Create memory DC
+    HDC hdcMem = CreateCompatibleDC(hdcWindow);
+
+    // Create bitmap
+    HBITMAP hBitmap = CreateCompatibleBitmap(hdcWindow, width, height);
+
+    // Select bitmap into memory DC
+    SelectObject(hdcMem, hBitmap);
+
+    // Copy window content to memory bitmap
+    BitBlt(hdcMem, 0, 0, width, height,
+           hdcWindow, 0, 0, SRCCOPY);
+
+    // Bitmap info
+    BITMAP bmp;
+    GetObject(hBitmap, sizeof(BITMAP), &bmp);
+
+    BITMAPINFOHEADER bi;
+    ZeroMemory(&bi, sizeof(BITMAPINFOHEADER));
+
+    bi.biSize = sizeof(BITMAPINFOHEADER);
+    bi.biWidth = bmp.bmWidth;
+    bi.biHeight = bmp.bmHeight;
+    bi.biPlanes = 1;
+    bi.biBitCount = 24;
+    bi.biCompression = BI_RGB;
+
+    // Calculate bitmap size
+    DWORD bmpSize =
+        ((bmp.bmWidth * bi.biBitCount + 31) / 32) * 4 * bmp.bmHeight;
+
+    // Allocate memory for pixels
+    char* pixels = new char[bmpSize];
+
+    // Get bitmap pixels
+    GetDIBits(hdcWindow,
+              hBitmap,
+              0,
+              bmp.bmHeight,
+              pixels,
+              (BITMAPINFO*)&bi,
+              DIB_RGB_COLORS);
+
+    // File header
+    BITMAPFILEHEADER bmfHeader;
+
+    bmfHeader.bfType = 0x4D42; // "BM"
+    bmfHeader.bfOffBits =
+        sizeof(BITMAPFILEHEADER) + sizeof(BITMAPINFOHEADER);
+
+    bmfHeader.bfSize =
+        bmfHeader.bfOffBits + bmpSize;
+
+    bmfHeader.bfReserved1 = 0;
+    bmfHeader.bfReserved2 = 0;
+
+    // Open file
+    HANDLE hFile = CreateFileA(
+        filename,
+        GENERIC_WRITE,
+        0,
+        NULL,
+        CREATE_ALWAYS,
+        FILE_ATTRIBUTE_NORMAL,
+        NULL
+    );
+
+    // Write headers + pixels
+    DWORD written;
+
+    WriteFile(hFile,
+              &bmfHeader,
+              sizeof(BITMAPFILEHEADER),
+              &written,
+              NULL);
+
+    WriteFile(hFile,
+              &bi,
+              sizeof(BITMAPINFOHEADER),
+              &written,
+              NULL);
+
+    WriteFile(hFile,
+              pixels,
+              bmpSize,
+              &written,
+              NULL);
+
+    // Cleanup
+    CloseHandle(hFile);
+
+    delete[] pixels;
+
+    DeleteObject(hBitmap);
+
+    DeleteDC(hdcMem);
+
+    ReleaseDC(hwnd, hdcWindow);
 }
 
 // ================= WINDOW PROCEDURE =================
@@ -71,6 +190,10 @@ LRESULT CALLBACK WindowProcedure(HWND hwnd, UINT msg, WPARAM wp, LPARAM lp)
         {
             switch(LOWORD(wp))
             {
+                case IDM_SAVE:
+                    SaveBMP(hwnd, "drawing.bmp");
+                    break;
+
                 case IDM_CLEAR:
                     ClearScreen(hwnd);
                     break;
