@@ -1,3 +1,5 @@
+// main.cpp
+
 #include <windows.h>
 #include <vector>
 #include <cmath>
@@ -42,6 +44,16 @@ void ClearScreen(HWND hwnd)
 #define IDM_HAPPY 30
 #define IDM_SAD 31
 
+// Preferences
+#define IDM_BG_WHITE      50
+#define IDM_CURSOR_CROSS  51
+#define IDM_CURSOR_HAND   52
+#define IDM_COLOR_RED     53
+#define IDM_COLOR_GREEN   54
+#define IDM_COLOR_BLUE    55
+#define IDM_COLOR_BLACK   56
+#define IDM_COLOR_YELLOW  57
+
 // ================= MENU CREATION =================
 void AddMenus(HWND hwnd)
 {
@@ -71,6 +83,20 @@ void AddMenus(HWND hwnd)
     HMENU hFace = CreateMenu();
     AppendMenu(hFace, MF_STRING, IDM_HAPPY, "Sad Face");
     AppendMenu(hFace, MF_STRING, IDM_SAD, "Happy Face");
+
+    HMENU hPrefs = CreateMenu();
+    AppendMenu(hPrefs, MF_STRING, IDM_BG_WHITE,     "White Background");
+    AppendMenu(hPrefs, MF_SEPARATOR, 0, NULL);
+    AppendMenu(hPrefs, MF_STRING, IDM_CURSOR_CROSS, "Cursor: Crosshair");
+    AppendMenu(hPrefs, MF_STRING, IDM_CURSOR_HAND,  "Cursor: Hand");
+    AppendMenu(hPrefs, MF_SEPARATOR, 0, NULL);
+    AppendMenu(hPrefs, MF_STRING, IDM_COLOR_RED,    "Color: Red");
+    AppendMenu(hPrefs, MF_STRING, IDM_COLOR_GREEN,  "Color: Green");
+    AppendMenu(hPrefs, MF_STRING, IDM_COLOR_BLUE,   "Color: Blue");
+    AppendMenu(hPrefs, MF_STRING, IDM_COLOR_BLACK,  "Color: Black");
+    AppendMenu(hPrefs, MF_STRING, IDM_COLOR_YELLOW, "Color: Yellow");
+
+    AppendMenu(menu, MF_POPUP, (UINT_PTR)hPrefs, "Preferences");
 
     AppendMenu(menu, MF_POPUP, (UINT_PTR)hFile, "File");
     AppendMenu(menu, MF_POPUP, (UINT_PTR)hLines, "Lines");
@@ -214,6 +240,34 @@ LRESULT CALLBACK WindowProcedure(HWND hwnd, UINT msg, WPARAM wp, LPARAM lp)
                 case IDM_CLEAR:
                     ClearScreen(hwnd);
                     break;
+
+                case IDM_BG_WHITE:
+                {
+                RECT rect;
+                GetClientRect(hwnd, &rect);
+                HDC hdc2 = GetDC(hwnd);
+                HBRUSH whiteBrush = CreateSolidBrush(RGB(255, 255, 255));
+                FillRect(hdc2, &rect, whiteBrush);
+                DeleteObject(whiteBrush);
+                ReleaseDC(hwnd, hdc2);
+                break;
+                }
+
+                case IDM_CURSOR_CROSS:
+                SetClassLongPtr(hwnd, GCLP_HCURSOR,
+                (LONG_PTR)LoadCursor(NULL, IDC_CROSS));
+                break;
+
+                case IDM_CURSOR_HAND:
+                SetClassLongPtr(hwnd, GCLP_HCURSOR,
+                (LONG_PTR)LoadCursor(NULL, IDC_HAND));
+                break;
+
+                case IDM_COLOR_RED:    CurrentColor = RGB(255, 0,   0);   break;
+                case IDM_COLOR_GREEN:  CurrentColor = RGB(0,   200, 0);   break;
+                case IDM_COLOR_BLUE:   CurrentColor = RGB(0,   0,   255); break;
+                case IDM_COLOR_BLACK:  CurrentColor = RGB(0,   0,   0);   break;
+                case IDM_COLOR_YELLOW: CurrentColor = RGB(255, 255, 0);   break;
 
                 case IDM_DDA:
                     CurrentMode = LINE_DDA;

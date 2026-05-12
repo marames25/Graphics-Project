@@ -277,6 +277,8 @@ void CircleModifiedMidpoint(HDC hdc, Point center, int r, COLORREF c)
 //============== CURVE
 void DrawCardinalSpline(HDC hdc, const vector<Point>& pts, float tension, COLORREF c)
 {
+    HPEN hPen = CreatePen(PS_SOLID, 1, c);
+    HPEN hOldPen = (HPEN)SelectObject(hdc, hPen);
     if (pts.size() < 2) return;
 
     int n = (int)pts.size();
@@ -325,6 +327,8 @@ void DrawCardinalSpline(HDC hdc, const vector<Point>& pts, float tension, COLORR
             }
         }
     }
+    SelectObject(hdc, hOldPen);
+    DeleteObject(hPen);
 }
 
 
