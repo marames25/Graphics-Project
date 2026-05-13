@@ -28,7 +28,7 @@ void CircleMidpoint(HDC hdc, Point center, int r, COLORREF c);
 void CircleModifiedMidpoint(HDC hdc, Point center, int r, COLORREF c);
 
 // ================= ELLIPSE =================
-
+bool PointInsideEllipse(Point p, Point center, int a, int b);
 void EllipseDirect(HDC hdc, Point center, int a, int b, COLORREF c);
 
 void EllipsePolar(HDC hdc, Point center, int a, int b, COLORREF c);

@@ -32,6 +32,12 @@ struct CircleData {
     Point center;
     int radius;
 };
+struct EllipseData {
+    Point center;
+    int a, b; // semi-axes
+};
+
+
 // ================= DRAW MODES =================
 enum Mode
 {
@@ -98,4 +104,4 @@ extern COLORREF BoundaryColor;
 extern COLORREF BackgroundColor;
 
 extern vector<CircleData> DrawnCircles;
-
+extern vector<EllipseData> DrawnEllipses;
