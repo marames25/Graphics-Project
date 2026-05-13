@@ -38,13 +38,24 @@ void EllipseMidpoint(HDC hdc, Point center, int a, int b, COLORREF c);
 // ================= CURVES =================
 
 void DrawCardinalSpline(HDC hdc, const vector<Point>& pts, float tension, COLORREF c);
-// ================= FILLING =================
 
-void FillCircleWithLines(HDC hdc, Point center, int r, int quarter, COLORREF c);
 
+// ================== FILLING ===============
+void FillCircleWithLines(HDC hdc, Point c, int r, int quarter, COLORREF color);
+
+void FillSquareWithHermite(HDC hdc,
+                           int x1,
+                           int y1,
+                           int side,
+                           COLORREF c);
+bool PointInsideCircle(Point p, Point center, int r);
+
+void FloodFillRec(HDC hdc,
+                  int x,
+                  int y,
+                  COLORREF oldColor,
+                  COLORREF fillColor);
 void FillCircleWithCircles(HDC hdc, Point center, int r, int quarter, COLORREF c);
-
-void FillSquareHermit(HDC hdc, Point p1, Point p2, COLORREF c);
 
 void FillRectangleBezier(HDC hdc, Point p1, Point p2, COLORREF c);
 
@@ -52,7 +63,6 @@ void ConvexFill(HDC hdc, vector<Point> polygon, COLORREF c);
 
 void NonConvexFill(HDC hdc, vector<Point> polygon, COLORREF c);
 
-void RecursiveFloodFill(HDC hdc, int x, int y, COLORREF fillColor, COLORREF boundaryColor);
 
 void NonRecursiveFloodFill(HDC hdc, int x, int y, COLORREF fillColor, COLORREF boundaryColor);
 
@@ -78,17 +88,3 @@ void DrawFace(HDC hdc, Point center, int r, MouthType type, COLORREF c);
 
 
 
-// ================== FILLING ===============
-void FillCircleWithLines(HDC hdc, Point c, int r, int quarter, COLORREF color);
-
-void FillSquareWithHermite(HDC hdc,
-                           int x1,
-                           int y1,
-                           int side,
-                           COLORREF c);
-bool PointInsideCircle(Point p, Point center, int r);
-void FloodFillRec(HDC hdc,
-               int x,
-               int y,
-               COLORREF oldColor,
-               COLORREF fillColor);
