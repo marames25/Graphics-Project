@@ -14,36 +14,6 @@ void Draw8Points(HDC hdc, int xc, int yc, int x, int y, COLORREF c)
     SetPixel(hdc, xc + y, yc - x, c);
     SetPixel(hdc, xc - y, yc - x, c);
 }
-//void DrawHermiteCurve(HDC hdc, Point P0, Point T0,
-//                      Point P1, Point T1,
-//                      int n, COLORREF c)
-//{
-//    if (n < 2) return;
-//
-//    double dt = 1.0 / (n - 1);
-//
-//    double x_prev, y_prev;
-//
-//    for (double t = 0; t <= 1; t += dt)
-//    {
-//        double h1 = 2*t*t*t - 3*t*t + 1;
-//        double h2 = t*t*t - 2*t*t + t;
-//        double h3 = -2*t*t*t + 3*t*t;
-//        double h4 = t*t*t - t*t;
-//
-//        double x = h1*P0.x + h2*T0.x + h3*P1.x + h4*T1.x;
-//        double y = h1*P0.y + h2*T0.y + h3*P1.y + h4*T1.y;
-//
-//        if (t == 0)
-//        {
-//            MoveToEx(hdc, x, y, NULL);
-//        }
-//        else
-//        {
-//            LineTo(hdc, x, y);
-//        }
-//    }
-//}
 //============== LINE
 void LineDDA(HDC hdc, Point p1, Point p2, COLORREF c)
 {
@@ -307,6 +277,107 @@ void CircleModifiedMidpoint(HDC hdc, Point center, int r, COLORREF c)
         Draw8Points(hdc, center.x, center.y, x, y, c);
     }
 }
+//============== Ellipse
+bool PointInsideEllipse(Point p, Point center, int a, int b)
+{
+    double dx = p.x - center.x;
+    double dy = p.y - center.y;
+    return (dx*dx)/(double)(a*a) + (dy*dy)/(double)(b*b) <= 1.0;
+}
+vector<EllipseData> DrawnEllipses;
+void EllipseDirect(HDC hdc, Point center, int a, int b, COLORREF color)
+{
+    // x²/a² + y²/b² = 1  →  y = b * sqrt(1 - x²/a²)
+    for (int x = 0; x <= a; x++)
+    {
+        int y = (int)round(b * sqrt(1.0 - (double)(x*x) / (a*a)));
+        SetPixel(hdc, center.x + x, center.y - y, color);
+        SetPixel(hdc, center.x - x, center.y - y, color);
+        SetPixel(hdc, center.x + x, center.y + y, color);
+        SetPixel(hdc, center.x - x, center.y + y, color);
+    }
+    for (int y = 0; y <= b; y++)
+    {
+        int x = (int)round(a * sqrt(1.0 - (double)(y*y) / (b*b)));
+        SetPixel(hdc, center.x + x, center.y - y, color);
+        SetPixel(hdc, center.x - x, center.y - y, color);
+        SetPixel(hdc, center.x + x, center.y + y, color);
+        SetPixel(hdc, center.x - x, center.y + y, color);
+    }
+}
+
+void EllipsePolar(HDC hdc, Point center, int a, int b, COLORREF color)
+{
+    // parametric: x = a*cos(t), y = b*sin(t)
+    double step = 1.0 / max(a, b);
+    for (double t = 0; t <= 2 * M_PI; t += step)
+    {
+        int x = (int)round(a * cos(t));
+        int y = (int)round(b * sin(t));
+        SetPixel(hdc, center.x + x, center.y - y, color);
+    }
+}
+
+void EllipseMidpoint(HDC hdc, Point center, int a, int b, COLORREF color)
+{
+    long long a2 = (long long)a * a;
+    long long b2 = (long long)b * b;
+
+    auto plot = [&](int x, int y) {
+        SetPixel(hdc, center.x + x, center.y - y, color);
+        SetPixel(hdc, center.x - x, center.y - y, color);
+        SetPixel(hdc, center.x + x, center.y + y, color);
+        SetPixel(hdc, center.x - x, center.y + y, color);
+    };
+
+    int x = 0, y = b;
+
+    // --- Region 1: slope < -1 (|dy/dx| > 1) ---
+    // decision param: F(x+1, y-0.5) = b²(x+1)² + a²(y-0.5)² - a²b²
+    double d1 = b2 - a2 * b + 0.25 * a2;
+    double dx = 2.0 * b2 * x;
+    double dy = 2.0 * a2 * y;
+
+    while (dx < dy)
+    {
+        plot(x, y);
+        x++;
+        dx += 2.0 * b2;
+        if (d1 < 0)
+        {
+            d1 += dx + b2;
+        }
+        else
+        {
+            y--;
+            dy -= 2.0 * a2;
+            d1 += dx - dy + b2;
+        }
+    }
+
+    // --- Region 2: slope > -1 (|dy/dx| < 1) ---
+    // decision param: F(x+0.5, y-1) = b²(x+0.5)² + a²(y-1)² - a²b²
+    double d2 = b2 * (x + 0.5) * (x + 0.5)
+                + a2 * (y - 1.0) * (y - 1.0)
+                - (double)a2 * b2;
+
+    while (y >= 0)
+    {
+        plot(x, y);
+        y--;
+        dy -= 2.0 * a2;
+        if (d2 > 0)
+        {
+            d2 += a2 - dy;
+        }
+        else
+        {
+            x++;
+            dx += 2.0 * b2;
+            d2 += dx - dy + a2;
+        }
+    }
+}
 
 //============== CURVE
 void DrawCardinalSpline(HDC hdc, const vector<Point>& pts, float tension, COLORREF c)
@@ -395,97 +466,6 @@ void FillRectangleBezier(HDC hdc, Point p1, Point p2, COLORREF c)
     }
 }
 
-// ============= CLIPPING
-void SquarePointClipping(HDC hdc, Point p, Point p1,Point p2, COLORREF c)
-{
-    int xmin = min(p1.x, p2.x), ymin = min(p1.y, p2.y);
-    int side = min(abs(p1.x - p2.x), abs(p1.y - p2.y));
-    int xmax = xmin + side, ymax = ymin + side;
-    for(int x = xmin; x <= xmax; x++)
-    {
-        SetPixel(hdc, x, ymin, RGB(0, 0, 0));
-        SetPixel(hdc, x, ymax, RGB(0, 0, 0));
-    }
-    for(int y = ymin; y <= ymax; y++)
-    {
-        SetPixel(hdc, xmin, y, RGB(0, 0, 0));
-        SetPixel(hdc, xmax, y, RGB(0, 0, 0));
-    }
-    if(p.x >= xmin && p.x <= xmax && p.y >= ymin && p.y <= ymax)
-    {
-        CircleMidpoint(hdc, p, 5, c);
-    }
-}
-
-void SquareLineClipping(HDC hdc, Point p1, Point p2, Point clip1, Point clip2, COLORREF c)
-{
-    int xmin = min(clip1.x, clip2.x), ymin = min(clip1.y, clip2.y);
-    int side = min(abs(clip1.x-clip2.x), abs(clip1.y-clip2.y));
-    int xmax = xmin+side, ymax = ymin+side;
-    for(int x = xmin; x <= xmax; x++)
-    {
-        SetPixel(hdc, x, ymin, RGB(0, 0, 0));
-        SetPixel(hdc, x, ymax, RGB(0, 0, 0));
-    }
-    for(int y = ymin; y <= ymax; y++)
-    {
-        SetPixel(hdc, xmin, y, RGB(0, 0, 0));
-        SetPixel(hdc, xmax, y, RGB(0, 0, 0));
-    }
-
-    int code1 = ComputeCode(p1, xmin, ymin, xmax, ymax);
-    int code2 = ComputeCode(p2, xmin, ymin, xmax, ymax);
-
-    while(true)
-    {
-        if(!(code1|code2))
-        {
-            LineDDA(hdc, p1, p2, c);
-            break;
-        }
-        else if(code1 & code2)
-        {
-            break;
-        }
-        else
-        {
-            int codeOut = (code1 != 0) ? code1 : code2;
-            Point p;
-            if (codeOut & TOP)
-            {
-                p.x = p1.x + (double)(p2.x - p1.x) * (ymin - p1.y) / (p2.y - p1.y);
-                p.y = ymin;
-            }
-            else if (codeOut & BOTTOM)
-            {
-                p.x = p1.x + (double)(p2.x - p1.x) * (ymax - p1.y) / (p2.y - p1.y);
-                p.y = ymax;
-            }
-            else if (codeOut & LEFT)
-            {
-                p.y = p1.y + (double)(p2.y - p1.y) * (xmin - p1.x) / (p2.x - p1.x);
-                p.x = xmin;
-            }
-            else if (codeOut & RIGHT)
-            {
-                p.y = p1.y + (double)(p2.y - p1.y) * (xmax - p1.x) / (p2.x - p1.x);
-                p.x = xmax;
-            }
-
-            if(codeOut == code1)
-            {
-                p1=p;
-                code1 = ComputeCode(p1, xmin, ymin, xmax, ymax);
-            }
-            else
-            {
-                p2=p;
-                code2 = ComputeCode(p2, xmin, ymin, xmax, ymax);
-            }
-        }
-    }
-}
-
 
 //============== HAPPY /SAD FACE
 void DrawFace(HDC hdc, Point center, int r, MouthType type, COLORREF c)
@@ -517,5 +497,178 @@ void DrawFace(HDC hdc, Point center, int r, MouthType type, COLORREF c)
             y = center.y + r/2 - (t * t) * r/3;   // sad
 
         SetPixel(hdc, x, y, RGB(0,0,0));
+    }
+}
+
+//===========Filling
+
+FillCircleStep step = WAIT_CENTER;
+Point center;
+Point radiusPoint;
+Point quarterPoint;
+
+
+void FillCircleWithLines(HDC hdc, Point c, int r, int quarter, COLORREF color)
+{
+    for (int y = -r; y <= r; y++)
+    {
+        int dx = (int)sqrt(r*r - y*y);
+
+        int xStart = -dx;
+        int xEnd = dx;
+
+        for (int x = xStart; x <= xEnd; x++)
+        {
+            bool ok = false;
+
+            if (quarter == 1 && x >= 0 && y <= 0) ok = true;
+            if (quarter == 2 && x <= 0 && y <= 0) ok = true;
+            if (quarter == 3 && x <= 0 && y >= 0) ok = true;
+            if (quarter == 4 && x >= 0 && y >= 0) ok = true;
+
+            if (ok)
+                SetPixel(hdc, c.x + x, c.y + y, color);
+        }
+    }
+}
+vector<CircleData> DrawnCircles;
+bool PointInsideCircle(Point p, Point center, int r)
+{
+    int dx = p.x - center.x;
+    int dy = p.y - center.y;
+
+    return (dx * dx + dy * dy) < (r * r);
+}
+void FloodFillRec(HDC hdc,
+               int x,
+               int y,
+               COLORREF oldColor,
+               COLORREF fillColor)
+{
+    COLORREF current = GetPixel(hdc, x, y);
+
+    // fill same region
+    if (current != oldColor)
+        return;
+
+    if (current == fillColor)
+        return;
+
+    SetPixel(hdc, x, y, fillColor);
+
+    FloodFillRec(hdc, x + 1, y, oldColor, fillColor);
+    FloodFillRec(hdc, x - 1, y, oldColor, fillColor);
+    FloodFillRec(hdc, x, y + 1, oldColor, fillColor);
+    FloodFillRec(hdc, x, y - 1, oldColor, fillColor);
+}
+void FillSquareWithHermite(HDC hdc,
+                           int x1,
+                           int y1,
+                           int side,
+                           COLORREF c)
+{
+    int left = x1;
+    int top = y1;
+
+    int right = left + side;
+    int bottom = top + side;
+
+    // square border
+    LineDDA(hdc, Point(left, top), Point(right, top), c);
+    LineDDA(hdc, Point(right, top), Point(right, bottom), c);
+    LineDDA(hdc, Point(right, bottom), Point(left, bottom), c);
+    LineDDA(hdc, Point(left, bottom), Point(left, top), c);
+
+    // Hermite vertical curves
+    for (int x = left; x <= right; x += 2)
+    {
+        Point P0(x, top);
+        Point P1(x, bottom);
+
+        Point T0(0, side / 2);
+        Point T1(0, -side / 2);
+
+        for (double t = 0; t <= 1; t += 0.001) {
+            double t2 = t * t;
+            double t3 = t2 * t;
+
+            double h1 = 2 * t3 - 3 * t2 + 1;
+            double h2 = -2 * t3 + 3 * t2;
+            double h3 = t3 - 2 * t2 + t;
+            double h4 = t3 - t2;
+
+            int xh = (int) (
+                    h1 * P0.x +
+                    h2 * P1.x +
+                    h3 * T0.x +
+                    h4 * T1.x
+            );
+
+            int yh = (int) (
+                    h1 * P0.y +
+                    h2 * P1.y +
+                    h3 * T0.y +
+                    h4 * T1.y
+            );
+
+            SetPixel(hdc, xh, yh, c);
+        }
+    }
+}
+
+
+void EdgeToTable(Point p1, Point p2, vector <pair<int, int>> &table) {
+    if (p1.y == p2.y) return;
+    if (p1.y > p2.y) {
+        swap(p1.x, p2.x);
+        swap(p1.y, p2.y);
+    }
+    double x = p1.x, y = p1.y;
+    double m = double (p2.x - p1.x) / double (p2.y - p1.y);
+    while (y <= p2.y) {
+        table[y].first = min((int) round(x), table[y].first);
+        table[y].second = max((int) round(x), table[y].second);
+        y++; x += m;
+    }
+}
+
+void ConvexFill(HDC hdc, vector<Point> polygon, COLORREF c) {
+    // initializing the table
+    int height = GetSystemMetrics(SM_CYSCREEN);
+    vector <pair<int, int>> table(height, {INT_MAX, INT_MIN});
+
+    // generating edges and map them to the table
+    for (int i = 0; i < polygon.size(); i++) {
+        Point p1 = polygon[i], p2 = polygon[(i+1) % polygon.size()];
+        EdgeToTable(p1, p2, table);
+    }
+
+    // drawing the lines
+    for (int i = 0; i < height; i++) {
+        if (table[i].first == INT_MAX || table[i].second == INT_MIN) continue;
+        Point p1(table[i].first, i), p2(table[i].second, i);
+        LineMidpoint(hdc, p1, p2, c);
+    }
+
+}
+void NonRecursiveFloodFill(HDC hdc, int x, int y, COLORREF fillColor, COLORREF boundaryColor) {
+    int dx[] = {0, 0, 1, -1};
+    int dy[] = {1, -1, 0, 0};
+
+    queue <Point> q;
+    q.push({x,y});
+
+    while (!q.empty()) {
+        Point pnt = q.front();
+        q.pop();
+
+        COLORREF c = GetPixel(hdc, pnt.x, pnt.y);
+        if (c == boundaryColor || c == fillColor) continue;
+
+        SetPixel(hdc, pnt.x, pnt.y, fillColor);
+        for (int i = 0; i < 4; i++) {
+            int Nx = pnt.x+dx[i], Ny = pnt.y + dy[i];
+            q.push({Nx, Ny});
+        }
     }
 }

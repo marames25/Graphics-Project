@@ -1,5 +1,3 @@
-// main.cpp
-
 #include <windows.h>
 #include <vector>
 #include <cmath>
@@ -38,6 +36,11 @@ void ClearScreen(HWND hwnd)
 #define IDM_CIRCLE_MIDPOINT 23
 #define IDM_CIRCLE_MODIFIED 24
 
+// Ellipse
+#define IDM_ELLIPSE_DIRECT   50
+#define IDM_ELLIPSE_POLAR    51
+#define IDM_ELLIPSE_MIDPOINT 52
+
 // Curves
 #define IDM_CARDINAL 40
 
@@ -45,23 +48,30 @@ void ClearScreen(HWND hwnd)
 #define IDM_HAPPY 30
 #define IDM_SAD 31
 
+
 // Preferences
-#define IDM_BG_WHITE      50
-#define IDM_CURSOR_CROSS  51
-#define IDM_CURSOR_HAND   52
-#define IDM_COLOR_RED     53
-#define IDM_COLOR_GREEN   54
-#define IDM_COLOR_BLUE    55
-#define IDM_COLOR_BLACK   56
-#define IDM_COLOR_YELLOW  57
+#define IDM_BG_WHITE      80
+#define IDM_CURSOR_CROSS  81
+#define IDM_CURSOR_HAND   82
+#define IDM_COLOR_RED     83
+#define IDM_COLOR_GREEN   84
+#define IDM_COLOR_BLUE    85
+#define IDM_COLOR_BLACK   86
+#define IDM_COLOR_YELLOW  87
+
+// Clipping
+#define IDM_CLIP_SQ_POINT 90
+#define IDM_CLIP_SQ_LINE  91
 
 // Filling
 #define IDM_FILL_RECT_BEZIER  71
-
-// Clipping
-#define IDM_CLIP_SQ_POINT 60
-#define IDM_CLIP_SQ_LINE  61
-
+#define IDM_FILL_CIRCLE_LINES 60
+#define IDM_FILL_CIRCLE_CIRCLES 61
+#define IDM_FILL_SQUARE_HERMITE 62
+#define IDM_CONVEX_FILL 64
+#define IDM_NON_CONVEX_FILL 65
+#define IDM_FLOOD_FILL_RECURSIVE 66
+#define IDM_FLOOD_FILL_NON_RECURSIVE 67
 // ================= MENU CREATION =================
 void AddMenus(HWND hwnd)
 {
@@ -84,6 +94,8 @@ void AddMenus(HWND hwnd)
     AppendMenu(hCircle, MF_STRING, IDM_CIRCLE_MIDPOINT, "Midpoint Circle");
     AppendMenu(hCircle, MF_STRING, IDM_CIRCLE_MODIFIED, "Modified Midpoint");
 
+
+
     HMENU hCurves = CreateMenu();
     AppendMenu(hCurves, MF_STRING, IDM_CARDINAL, "Cardinal Spline");
 
@@ -104,12 +116,6 @@ void AddMenus(HWND hwnd)
     AppendMenu(hPrefs, MF_STRING, IDM_COLOR_BLACK,  "Color: Black");
     AppendMenu(hPrefs, MF_STRING, IDM_COLOR_YELLOW, "Color: Yellow");
 
-    HMENU hFilling = CreateMenu();
-    AppendMenu(hFilling, MF_STRING, IDM_FILL_RECT_BEZIER, "Fill Rect Bezier (H)");
-
-    HMENU hClipping = CreateMenu();
-    AppendMenu(hClipping, MF_STRING, IDM_CLIP_SQ_POINT, "Square Point Clip");
-    AppendMenu(hClipping, MF_STRING, IDM_CLIP_SQ_LINE,  "Square Line Clip");
 
     AppendMenu(menu, MF_POPUP, (UINT_PTR)hFile, "File");
     AppendMenu(menu, MF_POPUP, (UINT_PTR)hPrefs, "Preferences");
@@ -117,11 +123,20 @@ void AddMenus(HWND hwnd)
     AppendMenu(menu, MF_POPUP, (UINT_PTR)hCircle, "Circles");
     AppendMenu(menu, MF_POPUP, (UINT_PTR)hFace, "Faces");
     AppendMenu(menu, MF_POPUP, (UINT_PTR)hCurves, "Curves");
-    AppendMenu(menu, MF_POPUP, (UINT_PTR)hFilling, "Filling");
-    AppendMenu(menu, MF_POPUP, (UINT_PTR)hClipping, "Clipping");
 
-
+    HMENU hFill = CreateMenu();
+    AppendMenu(hFill, MF_STRING, IDM_FILL_CIRCLE_LINES, "Fill Circle (Lines)");
+    AppendMenu(hFill, MF_STRING, IDM_FILL_SQUARE_HERMITE, "Fill Square (Hermite)");
+    AppendMenu(hFill, MF_STRING, IDM_FLOOD_FILL_RECURSIVE, "Flood Fill Recursive");
+    AppendMenu(hFill, MF_STRING, IDM_FILL_RECT_BEZIER, "Fill Rect Bezier (H)");
+    AppendMenu(menu, MF_POPUP, (UINT_PTR)hFill, "Filling");
     SetMenu(hwnd, menu);
+
+    HMENU hEllipse = CreateMenu();
+    AppendMenu(hEllipse, MF_STRING, IDM_ELLIPSE_DIRECT,   "Direct Ellipse");
+    AppendMenu(hEllipse, MF_STRING, IDM_ELLIPSE_POLAR,    "Polar Ellipse");
+    AppendMenu(hEllipse, MF_STRING, IDM_ELLIPSE_MIDPOINT, "Midpoint Ellipse");
+    AppendMenu(menu, MF_POPUP, (UINT_PTR)hEllipse, "Ellipses");
 }
 
 // ================= Save & Load BMP Images =================
@@ -416,6 +431,8 @@ LRESULT CALLBACK WindowProcedure(HWND hwnd, UINT msg, WPARAM wp, LPARAM lp)
                 }
 
                 case IDM_CLEAR:
+                    DrawnCircles.clear();
+                    DrawnEllipses.clear();
                     ClearScreen(hwnd);
                     break;
 
@@ -479,6 +496,18 @@ LRESULT CALLBACK WindowProcedure(HWND hwnd, UINT msg, WPARAM wp, LPARAM lp)
                     CurrentMode = CIRCLE_MODIFIED;
                     break;
 
+                case IDM_ELLIPSE_DIRECT:
+                    CurrentMode = ELLIPSE_DIRECT;
+                    break;
+
+                case IDM_ELLIPSE_POLAR:
+                    CurrentMode = ELLIPSE_POLAR;
+                    break;
+
+                case IDM_ELLIPSE_MIDPOINT:
+                    CurrentMode = ELLIPSE_MIDPOINT;
+                    break;
+
                 case IDM_CARDINAL:
                     CurrentMode = CARDINAL_SPLINE;
                     TempPoints.clear();
@@ -505,7 +534,23 @@ LRESULT CALLBACK WindowProcedure(HWND hwnd, UINT msg, WPARAM wp, LPARAM lp)
                 case IDM_SAD:
                     CurrentMode = SAD_FACE;
                     break;
+
+                case IDM_FILL_CIRCLE_LINES:
+                    CurrentMode = FILL_CIRCLE_LINES;
+                    TempPoints.clear();
+                    break;
+
+                case IDM_FILL_SQUARE_HERMITE:
+                    CurrentMode = FILL_SQUARE_HERMITE;
+                    TempPoints.clear();
+                    break;
+
+                case IDM_FLOOD_FILL_RECURSIVE:
+                    CurrentMode = FLOOD_FILL_RECURSIVE;
+                    TempPoints.clear();
+                    break;
             }
+
             break;
         }
 
@@ -528,7 +573,140 @@ LRESULT CALLBACK WindowProcedure(HWND hwnd, UINT msg, WPARAM wp, LPARAM lp)
                     ReleaseDC(hwnd, hdc);
                     break;
                 }
+                if (CurrentMode == FLOOD_FILL_RECURSIVE)
+                {
+                    POINT seed = { LOWORD(lp), HIWORD(lp) };
 
+                    Point click(seed.x, seed.y);
+
+                    bool insideAny = false;
+
+                    for (const auto& c : DrawnCircles)
+                    {
+                        if (PointInsideCircle(click, c.center, c.radius))
+                        {
+                            insideAny = true;
+                            break;
+                        }
+                    }
+
+                    if (!insideAny)
+                    {
+                        for (const auto& e : DrawnEllipses)
+                        {
+                            if (PointInsideEllipse(click, e.center, e.a, e.b))
+                            {
+                                insideAny = true;
+                                break;
+                            }
+                        }
+                    }
+
+                    if (!insideAny)
+                    {
+                        MessageBox(hwnd,
+                                   "Click inside a circle or ellipse only!",
+                                   "Invalid Fill",
+                                   MB_OK | MB_ICONWARNING);
+                        ReleaseDC(hwnd, hdc);
+                        return 0;
+                    }
+
+                    COLORREF oldColor = GetPixel(hdc, seed.x, seed.y);
+                    if (oldColor == RGB(255, 0, 0))
+                    {
+                        ReleaseDC(hwnd, hdc);
+                        return 0;
+                    }
+
+                    FloodFillRec(hdc, seed.x, seed.y, oldColor, RGB(255, 0, 0));
+
+                    ReleaseDC(hwnd, hdc);
+                    return 0;
+                }
+
+                if (CurrentMode == FILL_CIRCLE_LINES)
+                {
+                    if (step == WAIT_CENTER)
+                    {
+                        center = Point(LOWORD(lp), HIWORD(lp));
+                        step = WAIT_RADIUS;
+                    }
+                    else if (step == WAIT_RADIUS)
+                    {
+                        radiusPoint = Point(LOWORD(lp), HIWORD(lp));
+                        step = WAIT_QUARTER;
+                    }
+                    else if (step == WAIT_QUARTER)
+                    {
+                        quarterPoint = Point(LOWORD(lp), HIWORD(lp));
+
+                        int dx = radiusPoint.x - center.x;
+                        int dy = radiusPoint.y - center.y;
+                        int r = (int)sqrt(dx * dx + dy * dy);
+
+                        int quarter;
+
+                        if (quarterPoint.x >= center.x && quarterPoint.y <= center.y)
+                            quarter = 1;
+                        else if (quarterPoint.x <= center.x && quarterPoint.y <= center.y)
+                            quarter = 2;
+                        else if (quarterPoint.x <= center.x && quarterPoint.y >= center.y)
+                            quarter = 3;
+                        else
+                            quarter = 4;
+
+                        // 1) draw full circle
+                        CircleMidpoint(hdc, center, r, CurrentColor);
+
+                        // 2) fill selected quarter
+                        FillCircleWithLines(hdc, center, r, quarter, CurrentColor);
+
+                        // reset
+                        step = WAIT_CENTER;
+                        TempPoints.clear();
+                    }
+
+                    ReleaseDC(hwnd, hdc);
+                    break;
+                }
+                // ===== ELLIPSE (3 clicks: center, a-axis point, b-axis point)
+                if (CurrentMode == ELLIPSE_DIRECT  ||
+                    CurrentMode == ELLIPSE_POLAR   ||
+                    CurrentMode == ELLIPSE_MIDPOINT)
+                {
+                    if (TempPoints.size() == 3)
+                    {
+                        Point pc = TempPoints[0]; // center
+                        Point pa = TempPoints[1]; // defines a (horizontal radius)
+                        Point pb = TempPoints[2]; // defines b (vertical radius)
+
+                        int a = (int)sqrt((double)(pa.x - pc.x)*(pa.x - pc.x)
+                                          + (double)(pa.y - pc.y)*(pa.y - pc.y));
+                        int b = (int)sqrt((double)(pb.x - pc.x)*(pb.x - pc.x)
+                                          + (double)(pb.y - pc.y)*(pb.y - pc.y));
+
+                        switch (CurrentMode)
+                        {
+                            case ELLIPSE_DIRECT:
+                                EllipseDirect(hdc, pc, a, b, CurrentColor);
+                                DrawnEllipses.push_back({pc, a, b});
+                                break;
+                            case ELLIPSE_POLAR:
+                                EllipsePolar(hdc, pc, a, b, CurrentColor);
+                                DrawnEllipses.push_back({pc, a, b});
+                                break;
+                            case ELLIPSE_MIDPOINT:
+                                EllipseMidpoint(hdc, pc, a, b, CurrentColor);
+                                DrawnEllipses.push_back({pc, a, b});
+                                break;
+                        }
+
+                        TempPoints.clear();
+                    }
+                    ReleaseDC(hwnd, hdc);
+                    break;
+                }
                 // ================= 2-POINT MODES =================
                 if (TempPoints.size() == 2)
                 {
@@ -554,28 +732,50 @@ LRESULT CALLBACK WindowProcedure(HWND hwnd, UINT msg, WPARAM wp, LPARAM lp)
                             break;
 
                             // ===== CIRCLES =====
-                        case CIRCLE_DIRECT:
-                            CircleDirect(hdc, p1, sqrt(dx*dx + dy*dy), CurrentColor);
-                            break;
+                        case CIRCLE_DIRECT: {
+                            int r = sqrt(dx * dx + dy * dy);
 
-                        case CIRCLE_POLAR:
-                            CirclePolar(hdc, p1, sqrt(dx*dx + dy*dy), CurrentColor);
-                            break;
+                            DrawnCircles.push_back({p1, r});
 
-                        case CIRCLE_ITERATIVE_POLAR:
-                            CircleIterativePolar(hdc, p1, sqrt(dx*dx + dy*dy), CurrentColor);
+                            CircleDirect(hdc, p1, sqrt(dx * dx + dy * dy), CurrentColor);
                             break;
+                        }
 
-                        case CIRCLE_MIDPOINT:
-                            CircleMidpoint(hdc, p1, sqrt(dx*dx + dy*dy), CurrentColor);
-                            break;
+                        case CIRCLE_POLAR: {
+                            int r = sqrt(dx * dx + dy * dy);
 
-                        case CIRCLE_MODIFIED:
-                            CircleModifiedMidpoint(hdc, p1, sqrt(dx*dx + dy*dy), CurrentColor);
+                            DrawnCircles.push_back({p1, r});
+
+                            CirclePolar(hdc, p1, sqrt(dx * dx + dy * dy), CurrentColor);
                             break;
-                        case FILL_RECT_BEZIER:
-                            FillRectangleBezier(hdc, p1, p2, CurrentColor);
+                        }
+
+                        case CIRCLE_ITERATIVE_POLAR: {
+                            int r = sqrt(dx * dx + dy * dy);
+
+                            DrawnCircles.push_back({p1, r});
+
+                            CircleIterativePolar(hdc, p1, sqrt(dx * dx + dy * dy), CurrentColor);
                             break;
+                        }
+
+                        case CIRCLE_MIDPOINT: {
+                            int r = sqrt(dx * dx + dy * dy);
+
+                            DrawnCircles.push_back({p1, r});
+
+                            CircleMidpoint(hdc, p1, sqrt(dx * dx + dy * dy), CurrentColor);
+                            break;
+                        }
+
+                        case CIRCLE_MODIFIED: {
+                            int r = sqrt(dx * dx + dy * dy);
+
+                            DrawnCircles.push_back({p1, r});
+
+                            CircleModifiedMidpoint(hdc, p1, sqrt(dx * dx + dy * dy), CurrentColor);
+                            break;
+                        }
 
                             // ===== FACES =====
                         case HAPPY_FACE:
@@ -585,6 +785,25 @@ LRESULT CALLBACK WindowProcedure(HWND hwnd, UINT msg, WPARAM wp, LPARAM lp)
                         case SAD_FACE:
                             DrawFace(hdc, p1, sqrt(dx*dx + dy*dy), SAD, CurrentColor);
                             break;
+
+                        case FILL_RECT_BEZIER:
+                            FillRectangleBezier(hdc, p1, p2, CurrentColor);
+                            break;
+
+                        case FILL_SQUARE_HERMITE:
+                        {
+                            int side = max(abs(dx), abs(dy));
+
+                            FillSquareWithHermite(
+                                    hdc,
+                                    p1.x,
+                                    p1.y,
+                                    side,
+                                    CurrentColor
+                            );
+
+                            break;
+                        }
                     }
 
                     TempPoints.clear();
