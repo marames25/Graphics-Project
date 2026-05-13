@@ -444,7 +444,7 @@ void FillSquareWithHermite(HDC hdc,
             );
 
             SetPixel(hdc, xh, yh, c);
-
+        }}}
 void NonRecursiveFloodFill(HDC hdc, int x, int y, COLORREF fillColor, COLORREF boundaryColor) {
     int dx[] = {0, 0, 1, -1};
     int dy[] = {1, -1, 0, 0};
