@@ -546,7 +546,7 @@ void FillSquareWithHermite(HDC hdc,
             SetPixel(hdc, xh, yh, c);
         }
     }
-        }}}
+}
 
 
 void EdgeToTable(Point p1, Point p2, vector <pair<int, int>> &table) {
