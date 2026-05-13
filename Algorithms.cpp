@@ -243,6 +243,107 @@ void CircleModifiedMidpoint(HDC hdc, Point center, int r, COLORREF c)
         Draw8Points(hdc, center.x, center.y, x, y, c);
     }
 }
+//============== Ellipse
+bool PointInsideEllipse(Point p, Point center, int a, int b)
+{
+    double dx = p.x - center.x;
+    double dy = p.y - center.y;
+    return (dx*dx)/(double)(a*a) + (dy*dy)/(double)(b*b) <= 1.0;
+}
+vector<EllipseData> DrawnEllipses;
+void EllipseDirect(HDC hdc, Point center, int a, int b, COLORREF color)
+{
+    // x²/a² + y²/b² = 1  →  y = b * sqrt(1 - x²/a²)
+    for (int x = 0; x <= a; x++)
+    {
+        int y = (int)round(b * sqrt(1.0 - (double)(x*x) / (a*a)));
+        SetPixel(hdc, center.x + x, center.y - y, color);
+        SetPixel(hdc, center.x - x, center.y - y, color);
+        SetPixel(hdc, center.x + x, center.y + y, color);
+        SetPixel(hdc, center.x - x, center.y + y, color);
+    }
+    for (int y = 0; y <= b; y++)
+    {
+        int x = (int)round(a * sqrt(1.0 - (double)(y*y) / (b*b)));
+        SetPixel(hdc, center.x + x, center.y - y, color);
+        SetPixel(hdc, center.x - x, center.y - y, color);
+        SetPixel(hdc, center.x + x, center.y + y, color);
+        SetPixel(hdc, center.x - x, center.y + y, color);
+    }
+}
+
+void EllipsePolar(HDC hdc, Point center, int a, int b, COLORREF color)
+{
+    // parametric: x = a*cos(t), y = b*sin(t)
+    double step = 1.0 / max(a, b);
+    for (double t = 0; t <= 2 * M_PI; t += step)
+    {
+        int x = (int)round(a * cos(t));
+        int y = (int)round(b * sin(t));
+        SetPixel(hdc, center.x + x, center.y - y, color);
+    }
+}
+
+void EllipseMidpoint(HDC hdc, Point center, int a, int b, COLORREF color)
+{
+    long long a2 = (long long)a * a;
+    long long b2 = (long long)b * b;
+
+    auto plot = [&](int x, int y) {
+        SetPixel(hdc, center.x + x, center.y - y, color);
+        SetPixel(hdc, center.x - x, center.y - y, color);
+        SetPixel(hdc, center.x + x, center.y + y, color);
+        SetPixel(hdc, center.x - x, center.y + y, color);
+    };
+
+    int x = 0, y = b;
+
+    // --- Region 1: slope < -1 (|dy/dx| > 1) ---
+    // decision param: F(x+1, y-0.5) = b²(x+1)² + a²(y-0.5)² - a²b²
+    double d1 = b2 - a2 * b + 0.25 * a2;
+    double dx = 2.0 * b2 * x;
+    double dy = 2.0 * a2 * y;
+
+    while (dx < dy)
+    {
+        plot(x, y);
+        x++;
+        dx += 2.0 * b2;
+        if (d1 < 0)
+        {
+            d1 += dx + b2;
+        }
+        else
+        {
+            y--;
+            dy -= 2.0 * a2;
+            d1 += dx - dy + b2;
+        }
+    }
+
+    // --- Region 2: slope > -1 (|dy/dx| < 1) ---
+    // decision param: F(x+0.5, y-1) = b²(x+0.5)² + a²(y-1)² - a²b²
+    double d2 = b2 * (x + 0.5) * (x + 0.5)
+                + a2 * (y - 1.0) * (y - 1.0)
+                - (double)a2 * b2;
+
+    while (y >= 0)
+    {
+        plot(x, y);
+        y--;
+        dy -= 2.0 * a2;
+        if (d2 > 0)
+        {
+            d2 += a2 - dy;
+        }
+        else
+        {
+            x++;
+            dx += 2.0 * b2;
+            d2 += dx - dy + a2;
+        }
+    }
+}
 
 //============== CURVE
 void DrawCardinalSpline(HDC hdc, const vector<Point>& pts, float tension, COLORREF c)
@@ -419,24 +520,23 @@ void FillSquareWithHermite(HDC hdc,
         Point T0(0, side / 2);
         Point T1(0, -side / 2);
 
-        for (double t = 0; t <= 1; t += 0.001)
-        {
+        for (double t = 0; t <= 1; t += 0.001) {
             double t2 = t * t;
             double t3 = t2 * t;
 
-            double h1 = 2*t3 - 3*t2 + 1;
-            double h2 = -2*t3 + 3*t2;
-            double h3 = t3 - 2*t2 + t;
+            double h1 = 2 * t3 - 3 * t2 + 1;
+            double h2 = -2 * t3 + 3 * t2;
+            double h3 = t3 - 2 * t2 + t;
             double h4 = t3 - t2;
 
-            int xh = (int)(
+            int xh = (int) (
                     h1 * P0.x +
                     h2 * P1.x +
                     h3 * T0.x +
                     h4 * T1.x
             );
 
-            int yh = (int)(
+            int yh = (int) (
                     h1 * P0.y +
                     h2 * P1.y +
                     h3 * T0.y +
@@ -444,21 +544,23 @@ void FillSquareWithHermite(HDC hdc,
             );
 
             SetPixel(hdc, xh, yh, c);
-
+        }
+    }
+}
 void NonRecursiveFloodFill(HDC hdc, int x, int y, COLORREF fillColor, COLORREF boundaryColor) {
     int dx[] = {0, 0, 1, -1};
     int dy[] = {1, -1, 0, 0};
-    
+
     queue <Point> q;
     q.push({x,y});
-    
+
     while (!q.empty()) {
         Point pnt = q.front();
         q.pop();
-        
+
         COLORREF c = GetPixel(hdc, pnt.x, pnt.y);
         if (c == boundaryColor || c == fillColor) continue;
-        
+
         SetPixel(hdc, pnt.x, pnt.y, fillColor);
         for (int i = 0; i < 4; i++) {
             int Nx = pnt.x+dx[i], Ny = pnt.y + dy[i];

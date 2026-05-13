@@ -36,6 +36,11 @@ void ClearScreen(HWND hwnd)
 #define IDM_CIRCLE_MIDPOINT 23
 #define IDM_CIRCLE_MODIFIED 24
 
+// Ellipse
+#define IDM_ELLIPSE_DIRECT   50
+#define IDM_ELLIPSE_POLAR    51
+#define IDM_ELLIPSE_MIDPOINT 52
+
 // Curves
 #define IDM_CARDINAL 40
 
@@ -75,6 +80,8 @@ void AddMenus(HWND hwnd)
     AppendMenu(hCircle, MF_STRING, IDM_CIRCLE_MIDPOINT, "Midpoint Circle");
     AppendMenu(hCircle, MF_STRING, IDM_CIRCLE_MODIFIED, "Modified Midpoint");
 
+
+
     HMENU hCurves = CreateMenu();
     AppendMenu(hCurves, MF_STRING, IDM_CARDINAL, "Cardinal Spline");
 
@@ -95,6 +102,12 @@ void AddMenus(HWND hwnd)
     AppendMenu(hFill, MF_STRING, IDM_FLOOD_FILL_RECURSIVE, "Flood Fill Recursive");
     AppendMenu(menu, MF_POPUP, (UINT_PTR)hFill, "Filling");
     SetMenu(hwnd, menu);
+
+    HMENU hEllipse = CreateMenu();
+    AppendMenu(hEllipse, MF_STRING, IDM_ELLIPSE_DIRECT,   "Direct Ellipse");
+    AppendMenu(hEllipse, MF_STRING, IDM_ELLIPSE_POLAR,    "Polar Ellipse");
+    AppendMenu(hEllipse, MF_STRING, IDM_ELLIPSE_MIDPOINT, "Midpoint Ellipse");
+    AppendMenu(menu, MF_POPUP, (UINT_PTR)hEllipse, "Ellipses");
 }
 
 // ================= Save & Load BMP Images =================
@@ -390,6 +403,7 @@ LRESULT CALLBACK WindowProcedure(HWND hwnd, UINT msg, WPARAM wp, LPARAM lp)
 
                 case IDM_CLEAR:
                     DrawnCircles.clear();
+                    DrawnEllipses.clear();
                     ClearScreen(hwnd);
                     break;
 
@@ -423,6 +437,18 @@ LRESULT CALLBACK WindowProcedure(HWND hwnd, UINT msg, WPARAM wp, LPARAM lp)
 
                 case IDM_CIRCLE_MODIFIED:
                     CurrentMode = CIRCLE_MODIFIED;
+                    break;
+
+                case IDM_ELLIPSE_DIRECT:
+                    CurrentMode = ELLIPSE_DIRECT;
+                    break;
+
+                case IDM_ELLIPSE_POLAR:
+                    CurrentMode = ELLIPSE_POLAR;
+                    break;
+
+                case IDM_ELLIPSE_MIDPOINT:
+                    CurrentMode = ELLIPSE_MIDPOINT;
                     break;
 
                 case IDM_CARDINAL:
@@ -479,10 +505,11 @@ LRESULT CALLBACK WindowProcedure(HWND hwnd, UINT msg, WPARAM wp, LPARAM lp)
                 if (CurrentMode == FLOOD_FILL_RECURSIVE)
                 {
                     POINT seed = { LOWORD(lp), HIWORD(lp) };
+
                     Point click(seed.x, seed.y);
 
-                    // Check if click is inside ANY drawn circle
                     bool insideAny = false;
+
                     for (const auto& c : DrawnCircles)
                     {
                         if (PointInsideCircle(click, c.center, c.radius))
@@ -494,8 +521,20 @@ LRESULT CALLBACK WindowProcedure(HWND hwnd, UINT msg, WPARAM wp, LPARAM lp)
 
                     if (!insideAny)
                     {
+                        for (const auto& e : DrawnEllipses)
+                        {
+                            if (PointInsideEllipse(click, e.center, e.a, e.b))
+                            {
+                                insideAny = true;
+                                break;
+                            }
+                        }
+                    }
+
+                    if (!insideAny)
+                    {
                         MessageBox(hwnd,
-                                   "Click inside a circle only!",
+                                   "Click inside a circle or ellipse only!",
                                    "Invalid Fill",
                                    MB_OK | MB_ICONWARNING);
                         ReleaseDC(hwnd, hdc);
@@ -557,6 +596,43 @@ LRESULT CALLBACK WindowProcedure(HWND hwnd, UINT msg, WPARAM wp, LPARAM lp)
                         TempPoints.clear();
                     }
 
+                    ReleaseDC(hwnd, hdc);
+                    break;
+                }
+                // ===== ELLIPSE (3 clicks: center, a-axis point, b-axis point)
+                if (CurrentMode == ELLIPSE_DIRECT  ||
+                    CurrentMode == ELLIPSE_POLAR   ||
+                    CurrentMode == ELLIPSE_MIDPOINT)
+                {
+                    if (TempPoints.size() == 3)
+                    {
+                        Point pc = TempPoints[0]; // center
+                        Point pa = TempPoints[1]; // defines a (horizontal radius)
+                        Point pb = TempPoints[2]; // defines b (vertical radius)
+
+                        int a = (int)sqrt((double)(pa.x - pc.x)*(pa.x - pc.x)
+                                          + (double)(pa.y - pc.y)*(pa.y - pc.y));
+                        int b = (int)sqrt((double)(pb.x - pc.x)*(pb.x - pc.x)
+                                          + (double)(pb.y - pc.y)*(pb.y - pc.y));
+
+                        switch (CurrentMode)
+                        {
+                            case ELLIPSE_DIRECT:
+                                EllipseDirect(hdc, pc, a, b, CurrentColor);
+                                DrawnEllipses.push_back({pc, a, b});
+                                break;
+                            case ELLIPSE_POLAR:
+                                EllipsePolar(hdc, pc, a, b, CurrentColor);
+                                DrawnEllipses.push_back({pc, a, b});
+                                break;
+                            case ELLIPSE_MIDPOINT:
+                                EllipseMidpoint(hdc, pc, a, b, CurrentColor);
+                                DrawnEllipses.push_back({pc, a, b});
+                                break;
+                        }
+
+                        TempPoints.clear();
+                    }
                     ReleaseDC(hwnd, hdc);
                     break;
                 }
