@@ -22,6 +22,13 @@ enum MouthType
     HAPPY = 0,
     SAD = 1
 };
+enum FillCircleStep
+{
+    WAIT_CENTER,
+    WAIT_RADIUS,
+    WAIT_QUARTER
+};
+
 // ================= DRAW MODES =================
 enum Mode
 {
@@ -50,7 +57,7 @@ enum Mode
     // ================= FILLING =================
     FILL_CIRCLE_LINES,
     FILL_CIRCLE_CIRCLES,
-    FILL_SQUARE_HERMIT,
+    FILL_SQUARE_HERMITE,
     FILL_RECT_BEZIER,
     CONVEX_FILL,
     NON_CONVEX_FILL,
@@ -79,3 +86,8 @@ extern Mode CurrentMode;
 extern COLORREF CurrentColor;
 
 extern vector<Point> TempPoints;
+
+extern FillCircleStep step;
+extern Point center;
+extern Point radiusPoint;
+extern Point quarterPoint;
