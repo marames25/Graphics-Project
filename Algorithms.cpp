@@ -360,3 +360,26 @@ void DrawFace(HDC hdc, Point center, int r, MouthType type, COLORREF c)
         SetPixel(hdc, x, y, RGB(0,0,0));
     }
 }
+
+
+void NonRecursiveFloodFill(HDC hdc, int x, int y, COLORREF fillColor, COLORREF boundaryColor) {
+    int dx[] = {0, 0, 1, -1};
+    int dy[] = {1, -1, 0, 0};
+    
+    queue <Point> q;
+    q.push({x,y});
+    
+    while (!q.empty()) {
+        Point pnt = q.front();
+        q.pop();
+        
+        COLORREF c = GetPixel(hdc, pnt.x, pnt.y);
+        if (c == boundaryColor || c == fillColor) continue;
+        
+        SetPixel(hdc, pnt.x, pnt.y, fillColor);
+        for (int i = 0; i < 4; i++) {
+            int Nx = pnt.x+dx[i], Ny = pnt.y + dy[i];
+            q.push({Nx, Ny});
+        }
+    }
+}
