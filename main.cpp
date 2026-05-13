@@ -55,6 +55,13 @@ void ClearScreen(HWND hwnd)
 #define IDM_COLOR_BLACK   56
 #define IDM_COLOR_YELLOW  57
 
+// Filling
+#define IDM_FILL_RECT_BEZIER  71
+
+// Clipping
+#define IDM_CLIP_SQ_POINT 60
+#define IDM_CLIP_SQ_LINE  61
+
 // ================= MENU CREATION =================
 void AddMenus(HWND hwnd)
 {
@@ -97,13 +104,21 @@ void AddMenus(HWND hwnd)
     AppendMenu(hPrefs, MF_STRING, IDM_COLOR_BLACK,  "Color: Black");
     AppendMenu(hPrefs, MF_STRING, IDM_COLOR_YELLOW, "Color: Yellow");
 
-    AppendMenu(menu, MF_POPUP, (UINT_PTR)hPrefs, "Preferences");
+    HMENU hFilling = CreateMenu();
+    AppendMenu(hFilling, MF_STRING, IDM_FILL_RECT_BEZIER, "Fill Rect Bezier (H)");
+
+    HMENU hClipping = CreateMenu();
+    AppendMenu(hClipping, MF_STRING, IDM_CLIP_SQ_POINT, "Square Point Clip");
+    AppendMenu(hClipping, MF_STRING, IDM_CLIP_SQ_LINE,  "Square Line Clip");
 
     AppendMenu(menu, MF_POPUP, (UINT_PTR)hFile, "File");
+    AppendMenu(menu, MF_POPUP, (UINT_PTR)hPrefs, "Preferences");
     AppendMenu(menu, MF_POPUP, (UINT_PTR)hLines, "Lines");
     AppendMenu(menu, MF_POPUP, (UINT_PTR)hCircle, "Circles");
     AppendMenu(menu, MF_POPUP, (UINT_PTR)hFace, "Faces");
     AppendMenu(menu, MF_POPUP, (UINT_PTR)hCurves, "Curves");
+    AppendMenu(menu, MF_POPUP, (UINT_PTR)hFilling, "Filling");
+    AppendMenu(menu, MF_POPUP, (UINT_PTR)hClipping, "Clipping");
 
 
     SetMenu(hwnd, menu);
@@ -468,6 +483,20 @@ LRESULT CALLBACK WindowProcedure(HWND hwnd, UINT msg, WPARAM wp, LPARAM lp)
                     CurrentMode = CARDINAL_SPLINE;
                     TempPoints.clear();
                     break;
+                case IDM_FILL_RECT_BEZIER:
+                    CurrentMode = FILL_RECT_BEZIER;
+                    TempPoints.clear();
+                    break;
+
+                case IDM_CLIP_SQ_POINT:
+                    CurrentMode = CLIP_SQUARE_POINT;
+                    TempPoints.clear();
+                    break;
+
+                case IDM_CLIP_SQ_LINE:
+                    CurrentMode = CLIP_SQUARE_LINE;
+                    TempPoints.clear();
+                    break;
 
                 case IDM_HAPPY:
                     CurrentMode = HAPPY_FACE;
@@ -543,6 +572,9 @@ LRESULT CALLBACK WindowProcedure(HWND hwnd, UINT msg, WPARAM wp, LPARAM lp)
 
                         case CIRCLE_MODIFIED:
                             CircleModifiedMidpoint(hdc, p1, sqrt(dx*dx + dy*dy), CurrentColor);
+                            break;
+                        case FILL_RECT_BEZIER:
+                            FillRectangleBezier(hdc, p1, p2, CurrentColor);
                             break;
 
                             // ===== FACES =====

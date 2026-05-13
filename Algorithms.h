@@ -64,9 +64,9 @@ void RectangleLineClipping(HDC hdc, Point p1, Point p2, Point clip1, Point clip2
 
 void RectanglePolygonClipping(HDC hdc, vector<Point> polygon, Point clip1, Point clip2);
 
-void SquarePointClipping(HDC hdc, Point p, Point p1, Point p2);
+void SquarePointClipping(HDC hdc, Point p, Point p1, Point p2, COLORREF c);
 
-void SquareLineClipping(HDC hdc, Point p1, Point p2, Point clip1, Point clip2);
+void SquareLineClipping(HDC hdc, Point p1, Point p2, Point clip1, Point clip2, COLORREF c);
 
 // ================= BONUS =================
 
