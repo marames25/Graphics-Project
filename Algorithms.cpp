@@ -14,36 +14,6 @@ void Draw8Points(HDC hdc, int xc, int yc, int x, int y, COLORREF c)
     SetPixel(hdc, xc + y, yc - x, c);
     SetPixel(hdc, xc - y, yc - x, c);
 }
-//void DrawHermiteCurve(HDC hdc, Point P0, Point T0,
-//                      Point P1, Point T1,
-//                      int n, COLORREF c)
-//{
-//    if (n < 2) return;
-//
-//    double dt = 1.0 / (n - 1);
-//
-//    double x_prev, y_prev;
-//
-//    for (double t = 0; t <= 1; t += dt)
-//    {
-//        double h1 = 2*t*t*t - 3*t*t + 1;
-//        double h2 = t*t*t - 2*t*t + t;
-//        double h3 = -2*t*t*t + 3*t*t;
-//        double h4 = t*t*t - t*t;
-//
-//        double x = h1*P0.x + h2*T0.x + h3*P1.x + h4*T1.x;
-//        double y = h1*P0.y + h2*T0.y + h3*P1.y + h4*T1.y;
-//
-//        if (t == 0)
-//        {
-//            MoveToEx(hdc, x, y, NULL);
-//        }
-//        else
-//        {
-//            LineTo(hdc, x, y);
-//        }
-//    }
-//}
 //============== LINE
 void LineDDA(HDC hdc, Point p1, Point p2, COLORREF c)
 {
@@ -361,6 +331,119 @@ void DrawFace(HDC hdc, Point center, int r, MouthType type, COLORREF c)
     }
 }
 
+//===========Filling
+
+FillCircleStep step = WAIT_CENTER;
+Point center;
+Point radiusPoint;
+Point quarterPoint;
+
+
+void FillCircleWithLines(HDC hdc, Point c, int r, int quarter, COLORREF color)
+{
+    for (int y = -r; y <= r; y++)
+    {
+        int dx = (int)sqrt(r*r - y*y);
+
+        int xStart = -dx;
+        int xEnd = dx;
+
+        for (int x = xStart; x <= xEnd; x++)
+        {
+            bool ok = false;
+
+            if (quarter == 1 && x >= 0 && y <= 0) ok = true;
+            if (quarter == 2 && x <= 0 && y <= 0) ok = true;
+            if (quarter == 3 && x <= 0 && y >= 0) ok = true;
+            if (quarter == 4 && x >= 0 && y >= 0) ok = true;
+
+            if (ok)
+                SetPixel(hdc, c.x + x, c.y + y, color);
+        }
+    }
+}
+vector<CircleData> DrawnCircles;
+bool PointInsideCircle(Point p, Point center, int r)
+{
+    int dx = p.x - center.x;
+    int dy = p.y - center.y;
+
+    return (dx * dx + dy * dy) < (r * r);
+}
+void FloodFillRec(HDC hdc,
+               int x,
+               int y,
+               COLORREF oldColor,
+               COLORREF fillColor)
+{
+    COLORREF current = GetPixel(hdc, x, y);
+
+    // fill same region
+    if (current != oldColor)
+        return;
+
+    if (current == fillColor)
+        return;
+
+    SetPixel(hdc, x, y, fillColor);
+
+    FloodFillRec(hdc, x + 1, y, oldColor, fillColor);
+    FloodFillRec(hdc, x - 1, y, oldColor, fillColor);
+    FloodFillRec(hdc, x, y + 1, oldColor, fillColor);
+    FloodFillRec(hdc, x, y - 1, oldColor, fillColor);
+}
+void FillSquareWithHermite(HDC hdc,
+                           int x1,
+                           int y1,
+                           int side,
+                           COLORREF c)
+{
+    int left = x1;
+    int top = y1;
+
+    int right = left + side;
+    int bottom = top + side;
+
+    // square border
+    LineDDA(hdc, Point(left, top), Point(right, top), c);
+    LineDDA(hdc, Point(right, top), Point(right, bottom), c);
+    LineDDA(hdc, Point(right, bottom), Point(left, bottom), c);
+    LineDDA(hdc, Point(left, bottom), Point(left, top), c);
+
+    // Hermite vertical curves
+    for (int x = left; x <= right; x += 2)
+    {
+        Point P0(x, top);
+        Point P1(x, bottom);
+
+        Point T0(0, side / 2);
+        Point T1(0, -side / 2);
+
+        for (double t = 0; t <= 1; t += 0.001)
+        {
+            double t2 = t * t;
+            double t3 = t2 * t;
+
+            double h1 = 2*t3 - 3*t2 + 1;
+            double h2 = -2*t3 + 3*t2;
+            double h3 = t3 - 2*t2 + t;
+            double h4 = t3 - t2;
+
+            int xh = (int)(
+                    h1 * P0.x +
+                    h2 * P1.x +
+                    h3 * T0.x +
+                    h4 * T1.x
+            );
+
+            int yh = (int)(
+                    h1 * P0.y +
+                    h2 * P1.y +
+                    h3 * T0.y +
+                    h4 * T1.y
+            );
+
+            SetPixel(hdc, xh, yh, c);
 
 void NonRecursiveFloodFill(HDC hdc, int x, int y, COLORREF fillColor, COLORREF boundaryColor) {
     int dx[] = {0, 0, 1, -1};

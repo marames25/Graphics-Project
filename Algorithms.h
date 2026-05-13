@@ -75,3 +75,20 @@ void CirclePointClipping(HDC hdc, Point p, Point center, int r);
 void CircleLineClipping(HDC hdc, Point p1, Point p2, Point center, int r);
 
 void DrawFace(HDC hdc, Point center, int r, MouthType type, COLORREF c);
+
+
+
+// ================== FILLING ===============
+void FillCircleWithLines(HDC hdc, Point c, int r, int quarter, COLORREF color);
+
+void FillSquareWithHermite(HDC hdc,
+                           int x1,
+                           int y1,
+                           int side,
+                           COLORREF c);
+bool PointInsideCircle(Point p, Point center, int r);
+void FloodFillRec(HDC hdc,
+               int x,
+               int y,
+               COLORREF oldColor,
+               COLORREF fillColor);
