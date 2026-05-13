@@ -625,6 +625,8 @@ void ConvexFill(HDC hdc, vector<Point> polygon, COLORREF c) {
 void NonRecursiveFloodFill(HDC hdc, int x, int y, COLORREF fillColor, COLORREF boundaryColor) {
     int dx[] = {0, 0, 1, -1};
     int dy[] = {1, -1, 0, 0};
+    int w = GetSystemMetrics(SM_CXSCREEN);
+    int h = GetSystemMetrics(SM_CYSCREEN);
 
     queue <Point> q;
     q.push({x,y});
@@ -634,7 +636,7 @@ void NonRecursiveFloodFill(HDC hdc, int x, int y, COLORREF fillColor, COLORREF b
         q.pop();
 
         COLORREF c = GetPixel(hdc, pnt.x, pnt.y);
-        if (c == boundaryColor || c == fillColor) continue;
+        if (c == boundaryColor || c == fillColor || pnt.x >= w || pnt.y >= h) continue;
 
         SetPixel(hdc, pnt.x, pnt.y, fillColor);
         for (int i = 0; i < 4; i++) {
