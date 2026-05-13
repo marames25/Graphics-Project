@@ -338,6 +338,7 @@ Point center;
 Point radiusPoint;
 Point quarterPoint;
 
+
 void FillCircleWithLines(HDC hdc, Point c, int r, int quarter, COLORREF color)
 {
     for (int y = -r; y <= r; y++)
@@ -361,22 +362,35 @@ void FillCircleWithLines(HDC hdc, Point c, int r, int quarter, COLORREF color)
         }
     }
 }
+vector<CircleData> DrawnCircles;
+bool PointInsideCircle(Point p, Point center, int r)
+{
+    int dx = p.x - center.x;
+    int dy = p.y - center.y;
 
-
-void FloodFillCircle(HDC hdc, int x, int y, COLORREF fillColor, COLORREF boundaryColor)
+    return (dx * dx + dy * dy) < (r * r);
+}
+void FloodFillRec(HDC hdc,
+               int x,
+               int y,
+               COLORREF oldColor,
+               COLORREF fillColor)
 {
     COLORREF current = GetPixel(hdc, x, y);
 
-    // stop conditions
-    if (current == boundaryColor) return;   // hit circle border
-    if (current == fillColor) return;       // already filled
+    // fill same region
+    if (current != oldColor)
+        return;
+
+    if (current == fillColor)
+        return;
 
     SetPixel(hdc, x, y, fillColor);
 
-    FloodFillCircle(hdc, x + 1, y, fillColor, boundaryColor);
-    FloodFillCircle(hdc, x - 1, y, fillColor, boundaryColor);
-    FloodFillCircle(hdc, x, y + 1, fillColor, boundaryColor);
-    FloodFillCircle(hdc, x, y - 1, fillColor, boundaryColor);
+    FloodFillRec(hdc, x + 1, y, oldColor, fillColor);
+    FloodFillRec(hdc, x - 1, y, oldColor, fillColor);
+    FloodFillRec(hdc, x, y + 1, oldColor, fillColor);
+    FloodFillRec(hdc, x, y - 1, oldColor, fillColor);
 }
 void FillSquareWithHermite(HDC hdc,
                            int x1,

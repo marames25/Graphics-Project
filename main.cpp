@@ -389,6 +389,7 @@ LRESULT CALLBACK WindowProcedure(HWND hwnd, UINT msg, WPARAM wp, LPARAM lp)
                 }
 
                 case IDM_CLEAR:
+                    DrawnCircles.clear();
                     ClearScreen(hwnd);
                     break;
 
@@ -475,18 +476,43 @@ LRESULT CALLBACK WindowProcedure(HWND hwnd, UINT msg, WPARAM wp, LPARAM lp)
                     ReleaseDC(hwnd, hdc);
                     break;
                 }
-                if (CurrentMode == FLOOD_FILL_RECURSIVE && TempPoints.size() == 1)
+                if (CurrentMode == FLOOD_FILL_RECURSIVE)
                 {
-                    int x = TempPoints[0].x;
-                    int y = TempPoints[0].y;
+                    POINT seed = { LOWORD(lp), HIWORD(lp) };
+                    Point click(seed.x, seed.y);
 
-                    COLORREF boundaryColor = CurrentColor; // circle color
+                    // Check if click is inside ANY drawn circle
+                    bool insideAny = false;
+                    for (const auto& c : DrawnCircles)
+                    {
+                        if (PointInsideCircle(click, c.center, c.radius))
+                        {
+                            insideAny = true;
+                            break;
+                        }
+                    }
 
-                    FloodFillCircle(hdc, x, y, RGB(255, 0, 0), boundaryColor);
+                    if (!insideAny)
+                    {
+                        MessageBox(hwnd,
+                                   "Click inside a circle only!",
+                                   "Invalid Fill",
+                                   MB_OK | MB_ICONWARNING);
+                        ReleaseDC(hwnd, hdc);
+                        return 0;
+                    }
 
-                    TempPoints.clear();
+                    COLORREF oldColor = GetPixel(hdc, seed.x, seed.y);
+                    if (oldColor == RGB(255, 0, 0))
+                    {
+                        ReleaseDC(hwnd, hdc);
+                        return 0;
+                    }
+
+                    FloodFillRec(hdc, seed.x, seed.y, oldColor, RGB(255, 0, 0));
+
                     ReleaseDC(hwnd, hdc);
-                    break;
+                    return 0;
                 }
 
                 if (CurrentMode == FILL_CIRCLE_LINES)
@@ -559,25 +585,50 @@ LRESULT CALLBACK WindowProcedure(HWND hwnd, UINT msg, WPARAM wp, LPARAM lp)
                             break;
 
                             // ===== CIRCLES =====
-                        case CIRCLE_DIRECT:
-                            CircleDirect(hdc, p1, sqrt(dx*dx + dy*dy), CurrentColor);
-                            break;
+                        case CIRCLE_DIRECT: {
+                            int r = sqrt(dx * dx + dy * dy);
 
-                        case CIRCLE_POLAR:
-                            CirclePolar(hdc, p1, sqrt(dx*dx + dy*dy), CurrentColor);
-                            break;
+                            DrawnCircles.push_back({p1, r});
 
-                        case CIRCLE_ITERATIVE_POLAR:
-                            CircleIterativePolar(hdc, p1, sqrt(dx*dx + dy*dy), CurrentColor);
+                            CircleDirect(hdc, p1, sqrt(dx * dx + dy * dy), CurrentColor);
                             break;
+                        }
 
-                        case CIRCLE_MIDPOINT:
-                            CircleMidpoint(hdc, p1, sqrt(dx*dx + dy*dy), CurrentColor);
-                            break;
+                        case CIRCLE_POLAR: {
+                            int r = sqrt(dx * dx + dy * dy);
 
-                        case CIRCLE_MODIFIED:
-                            CircleModifiedMidpoint(hdc, p1, sqrt(dx*dx + dy*dy), CurrentColor);
+                            DrawnCircles.push_back({p1, r});
+
+                            CirclePolar(hdc, p1, sqrt(dx * dx + dy * dy), CurrentColor);
                             break;
+                        }
+
+                        case CIRCLE_ITERATIVE_POLAR: {
+                            int r = sqrt(dx * dx + dy * dy);
+
+                            DrawnCircles.push_back({p1, r});
+
+                            CircleIterativePolar(hdc, p1, sqrt(dx * dx + dy * dy), CurrentColor);
+                            break;
+                        }
+
+                        case CIRCLE_MIDPOINT: {
+                            int r = sqrt(dx * dx + dy * dy);
+
+                            DrawnCircles.push_back({p1, r});
+
+                            CircleMidpoint(hdc, p1, sqrt(dx * dx + dy * dy), CurrentColor);
+                            break;
+                        }
+
+                        case CIRCLE_MODIFIED: {
+                            int r = sqrt(dx * dx + dy * dy);
+
+                            DrawnCircles.push_back({p1, r});
+
+                            CircleModifiedMidpoint(hdc, p1, sqrt(dx * dx + dy * dy), CurrentColor);
+                            break;
+                        }
 
                             // ===== FACES =====
                         case HAPPY_FACE:

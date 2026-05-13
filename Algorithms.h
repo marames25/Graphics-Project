@@ -86,4 +86,9 @@ void FillSquareWithHermite(HDC hdc,
                            int y1,
                            int side,
                            COLORREF c);
-void FloodFillCircle(HDC hdc, int x, int y, COLORREF fillColor, COLORREF boundaryColor);
+bool PointInsideCircle(Point p, Point center, int r);
+void FloodFillRec(HDC hdc,
+               int x,
+               int y,
+               COLORREF oldColor,
+               COLORREF fillColor);

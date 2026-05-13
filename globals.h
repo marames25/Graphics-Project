@@ -28,7 +28,10 @@ enum FillCircleStep
     WAIT_RADIUS,
     WAIT_QUARTER
 };
-
+struct CircleData {
+    Point center;
+    int radius;
+};
 // ================= DRAW MODES =================
 enum Mode
 {
@@ -86,8 +89,13 @@ extern Mode CurrentMode;
 extern COLORREF CurrentColor;
 
 extern vector<Point> TempPoints;
-
 extern FillCircleStep step;
 extern Point center;
 extern Point radiusPoint;
 extern Point quarterPoint;
+
+extern COLORREF BoundaryColor;
+extern COLORREF BackgroundColor;
+
+extern vector<CircleData> DrawnCircles;
+
