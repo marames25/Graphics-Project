@@ -3,6 +3,7 @@
 #include <windows.h>
 #include <vector>
 #include <cmath>
+#include <string>
 
 #include "globals.h"
 #include "Algorithms.h"
@@ -221,6 +222,120 @@ void SaveBMP(HWND hwnd, const char* filename)
     ReleaseDC(hwnd, hdcWindow);
 }
 
+void LoadBMP(HWND hwnd, const char* filename)
+{
+    // Open BMP file
+    HANDLE hFile = CreateFileA(
+        filename,
+        GENERIC_READ,
+        FILE_SHARE_READ,
+        NULL,
+        OPEN_EXISTING,
+        FILE_ATTRIBUTE_NORMAL,
+        NULL
+    );
+
+    if (hFile == INVALID_HANDLE_VALUE)
+        return;
+
+    DWORD bytesRead;
+
+    // Read file header
+    BITMAPFILEHEADER bmfHeader;
+    ReadFile(
+        hFile,
+        &bmfHeader,
+        sizeof(BITMAPFILEHEADER),
+        &bytesRead,
+        NULL
+    );
+
+    // Check if file is BMP
+    if (bmfHeader.bfType != 0x4D42)
+    {
+        CloseHandle(hFile);
+        return;
+    }
+
+    // Read info header
+    BITMAPINFOHEADER bi;
+    ReadFile(
+        hFile,
+        &bi,
+        sizeof(BITMAPINFOHEADER),
+        &bytesRead,
+        NULL
+    );
+
+    // Calculate image size
+    DWORD bmpSize =
+        ((bi.biWidth * bi.biBitCount + 31) / 32) * 4 * bi.biHeight;
+
+    // Allocate memory for pixels
+    char* pixels = new char[bmpSize];
+
+    // Move file pointer to pixel data
+    SetFilePointer(
+        hFile,
+        bmfHeader.bfOffBits,
+        NULL,
+        FILE_BEGIN
+    );
+
+    // Read pixel data
+    ReadFile(
+        hFile,
+        pixels,
+        bmpSize,
+        &bytesRead,
+        NULL
+    );
+
+    // Close file
+    CloseHandle(hFile);
+
+    // Get window DC
+    HDC hdcWindow = GetDC(hwnd);
+
+    // Create bitmap from pixel data
+    HBITMAP hBitmap = CreateDIBitmap(
+        hdcWindow,
+        &bi,
+        CBM_INIT,
+        pixels,
+        (BITMAPINFO*)&bi,
+        DIB_RGB_COLORS
+    );
+
+    // Create memory DC
+    HDC hdcMem = CreateCompatibleDC(hdcWindow);
+
+    // Select bitmap into memory DC
+    SelectObject(hdcMem, hBitmap);
+
+    // Draw bitmap to window
+    BitBlt(
+        hdcWindow,
+        0,
+        0,
+        bi.biWidth,
+        bi.biHeight,
+        hdcMem,
+        0,
+        0,
+        SRCCOPY
+    );
+
+    // Cleanup
+    delete[] pixels;
+
+    DeleteObject(hBitmap);
+
+    DeleteDC(hdcMem);
+
+    ReleaseDC(hwnd, hdcWindow);
+}
+
 // ================= WINDOW PROCEDURE =================
 LRESULT CALLBACK WindowProcedure(HWND hwnd, UINT msg, WPARAM wp, LPARAM lp)
 {
@@ -234,8 +349,56 @@ LRESULT CALLBACK WindowProcedure(HWND hwnd, UINT msg, WPARAM wp, LPARAM lp)
             switch(LOWORD(wp))
             {
                 case IDM_SAVE:
-                    SaveBMP(hwnd, "drawing.bmp");
+                {
+                    char filename[MAX_PATH];
+
+                    OPENFILENAME ofn;
+                    ZeroMemory(&ofn, sizeof(ofn));
+                    ofn.lStructSize = sizeof(ofn);
+                    ofn.hwndOwner = hwnd;
+                    ofn.lpstrFile = filename;
+                    ofn.nMaxFile = MAX_PATH;
+                    ofn.lpstrFilter = "Bitmap Files\0*.bmp\0All Files\0*.*\0";
+                    ofn.lpstrDefExt = "bmp";
+                    ofn.Flags = OFN_OVERWRITEPROMPT;
+
+                    if (GetSaveFileName(&ofn))
+                    {
+                        string name = filename;
+
+                        if (name.find(".bmp") == string::npos)
+                        {
+                            name += ".bmp";
+                        }
+
+                        SaveBMP(hwnd, name.c_str());
+                    }
                     break;
+                }
+
+                case IDM_LOAD:
+                {
+                    char filename[MAX_PATH];
+
+                    OPENFILENAME ofn;
+                    ZeroMemory(&ofn, sizeof(ofn));
+
+                    ofn.lStructSize = sizeof(ofn);
+                    ofn.hwndOwner = hwnd;
+                    ofn.lpstrFile = filename;
+                    ofn.nMaxFile = MAX_PATH;
+                    ofn.lpstrFilter =
+                        "Bitmap Files\0*.bmp\0"
+                        "All Files\0*.*\0";
+                    ofn.lpstrDefExt = "bmp";
+                    ofn.Flags = OFN_FILEMUSTEXIST | OFN_PATHMUSTEXIST;
+
+                    if (GetOpenFileName(&ofn))
+                    {
+                        LoadBMP(hwnd, filename);
+                    }
+                    break;
+                }
 
                 case IDM_CLEAR:
                     ClearScreen(hwnd);
