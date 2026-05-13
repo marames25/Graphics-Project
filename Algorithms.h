@@ -55,8 +55,8 @@ void FloodFillRec(HDC hdc,
                   int y,
                   COLORREF oldColor,
                   COLORREF fillColor);
-                  
-void FillCircleWithCircles(HDC hdc, Point center, int r, int xsi, int ysi, COLORREF c);
+
+void FillCircleWithCircles(HDC hdc, Point center, int r, Point quarter, COLORREF c);
 
 void FillRectangleBezier(HDC hdc, Point p1, Point p2, COLORREF c);
 
