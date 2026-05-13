@@ -546,6 +546,42 @@ void FillSquareWithHermite(HDC hdc,
             SetPixel(hdc, xh, yh, c);
         }
     }
+        }}}
+
+
+void EdgeToTable(Point p1, Point p2, vector <pair<int, int>> &table) {
+    if (p1.y == p2.y) return;
+    if (p1.y > p2.y) {
+        swap(p1.x, p2.x);
+        swap(p1.y, p2.y);
+    }
+    double x = p1.x, y = p1.y;
+    double m = double (p2.x - p1.x) / double (p2.y - p1.y);
+    while (y <= p2.y) {
+        table[y].first = min((int) round(x), table[y].first);
+        table[y].second = max((int) round(x), table[y].second);
+        y++; x += m;
+    }
+}
+
+void ConvexFill(HDC hdc, vector<Point> polygon, COLORREF c) {
+    // initializing the table
+    int height = GetSystemMetrics(SM_CYSCREEN);
+    vector <pair<int, int>> table(height, {INT_MAX, INT_MIN});
+
+    // generating edges and map them to the table
+    for (int i = 0; i < polygon.size(); i++) {
+        Point p1 = polygon[i], p2 = polygon[(i+1) % polygon.size()];
+        EdgeToTable(p1, p2, table);
+    }
+
+    // drawing the lines
+    for (int i = 0; i < height; i++) {
+        if (table[i].first == INT_MAX || table[i].second == INT_MIN) continue;
+        Point p1(table[i].first, i), p2(table[i].second, i);
+        LineMidpoint(hdc, p1, p2, c);
+    }
+
 }
 void NonRecursiveFloodFill(HDC hdc, int x, int y, COLORREF fillColor, COLORREF boundaryColor) {
     int dx[] = {0, 0, 1, -1};
