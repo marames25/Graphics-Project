@@ -158,8 +158,10 @@ void AddMenus(HWND hwnd) {
 
 	HMENU hFill = CreateMenu();
 	AppendMenu(hFill, MF_STRING, IDM_FILL_CIRCLE_LINES, "Fill Circle (Lines)");
+	AppendMenu(hFill, MF_STRING, IDM_FILL_CIRCLE_CIRCLES, "Fill Circle (Circles)");
 	AppendMenu(hFill, MF_STRING, IDM_FILL_SQUARE_HERMITE, "Fill Square (Hermite)");
 	AppendMenu(hFill, MF_STRING, IDM_FLOOD_FILL_RECURSIVE, "Flood Fill Recursive");
+	AppendMenu(hFill, MF_STRING, IDM_FLOOD_FILL_NON_RECURSIVE, "Flood Fill Non Recursive");
 	AppendMenu(hFill, MF_STRING, IDM_FILL_RECT_BEZIER, "Fill Rect Bezier (H)");
 	AppendMenu(menu, MF_POPUP, (UINT_PTR) hFill, "Filling");
 	SetMenu(hwnd, menu);
@@ -794,6 +796,10 @@ LRESULT CALLBACK WindowProcedure(HWND hwnd, UINT msg, WPARAM wp, LPARAM lp) {
 					TempPoints.clear();
 					break;
 
+				case IDM_FILL_CIRCLE_CIRCLES:
+					CurrentMode = FILL_CIRCLE_CIRCLES;
+					break;
+
 				case IDM_FILL_SQUARE_HERMITE:
 					CurrentMode = FILL_SQUARE_HERMITE;
 					TempPoints.clear();
@@ -801,6 +807,10 @@ LRESULT CALLBACK WindowProcedure(HWND hwnd, UINT msg, WPARAM wp, LPARAM lp) {
 
 				case IDM_FLOOD_FILL_RECURSIVE:
 					CurrentMode = FLOOD_FILL_RECURSIVE;
+					TempPoints.clear();
+					break;
+				case IDM_FLOOD_FILL_NON_RECURSIVE:
+					CurrentMode = FLOOD_FILL_NON_RECURSIVE;
 					TempPoints.clear();
 					break;
 			}
@@ -894,6 +904,12 @@ LRESULT CALLBACK WindowProcedure(HWND hwnd, UINT msg, WPARAM wp, LPARAM lp) {
 				return 0;
 			}
 
+			if (CurrentMode == FLOOD_FILL_NON_RECURSIVE) {
+				POINT center = {LOWORD(lp), HIWORD(lp)};
+				NonRecursiveFloodFill(hdc, center.x, center.y, RGB(69, 69, 69), RGB(255, 255, 255));
+				break;
+			}
+
 			if (CurrentMode == FILL_CIRCLE_LINES) {
 				if (step == WAIT_CENTER) {
 					center = Point(LOWORD(lp), HIWORD(lp));
@@ -930,6 +946,24 @@ LRESULT CALLBACK WindowProcedure(HWND hwnd, UINT msg, WPARAM wp, LPARAM lp) {
 					TempPoints.clear();
 				}
 
+				ReleaseDC(hwnd, hdc);
+				break;
+			}
+			if (CurrentMode == FILL_CIRCLE_CIRCLES) {
+				// TempPoints.push_back(Point(LOWORD(lp), HIWORD(lp)));
+				SetPixel(hdc, 100, 100, RGB(255, 0, 0));
+				if (TempPoints.size() == 3) {
+					Point center = TempPoints[0];
+					Point boundary = TempPoints[1];
+					Point quarter = TempPoints[2];
+					int dx = boundary.x - center.x;
+					int dy = boundary.y - center.y;
+					int r = (int) sqrt(dx * dx + dy * dy);
+					CircleMidpoint(hdc, center, r, CurrentColor);
+
+					FillCircleWithCircles(hdc, center, r, quarter, CurrentColor);
+					TempPoints.clear();
+				}
 				ReleaseDC(hwnd, hdc);
 				break;
 			}

@@ -472,6 +472,39 @@ void FillCircleWithLines(HDC hdc, Point c, int r, int quarter, COLORREF color) {
 	}
 }
 
+
+void DrawQuarter(HDC hdc, Point center, int r, int xsi, int ysi, COLORREF c) {
+	int x = 0;
+	int y = r;
+
+	int d = 1 - r;
+
+	SetPixel(hdc, center.x + xsi * x, center.y + ysi * y, c);
+	SetPixel(hdc, center.x + xsi * y, center.y + ysi * x, c);
+
+	while (x < y) {
+		if (d < 0) {
+			d += 2 * x + 3;
+		} else {
+			d += 2 * (x - y) + 5;
+			y--;
+		}
+
+		x++;
+
+		SetPixel(hdc, center.x + xsi * x, center.y + ysi * y, c);
+		SetPixel(hdc, center.x + xsi * y, center.y + ysi * x, c);
+	}
+}
+
+void FillCircleWithCircles(HDC hdc, Point center, int r, Point quarter, COLORREF c) {
+	int xsi = (quarter.x >= center.x) ? 1 : -1;
+	int ysi = (quarter.y >= center.y) ? 1 : -1;
+	for (int i = 0; i <= r; i++) {
+		DrawQuarter(hdc, center, i, xsi, ysi, c);
+	}
+}
+
 vector<CircleData> DrawnCircles;
 
 bool PointInsideCircle(Point p, Point center, int r) {
@@ -592,9 +625,11 @@ void ConvexFill(HDC hdc, vector<Point> polygon, COLORREF c) {
 	}
 }
 
-void NonRecursiveFloodFill(HDC hdc, int x, int y, COLORREF fillColor, COLORREF boundaryColor) {
+void NonRecursiveFloodFill(HDC hdc, int x, int y, COLORREF fillColor, COLORREF bcColor) {
 	int dx[] = {0, 0, 1, -1};
 	int dy[] = {1, -1, 0, 0};
+	int w = GetSystemMetrics(SM_CXSCREEN);
+	int h = GetSystemMetrics(SM_CYSCREEN);
 
 	queue<Point> q;
 	q.push({x, y});
@@ -604,7 +639,7 @@ void NonRecursiveFloodFill(HDC hdc, int x, int y, COLORREF fillColor, COLORREF b
 		q.pop();
 
 		COLORREF c = GetPixel(hdc, pnt.x, pnt.y);
-		if (c == boundaryColor || c == fillColor) continue;
+		if (c != bcColor || pnt.x >= w || pnt.y >= h) continue;
 
 		SetPixel(hdc, pnt.x, pnt.y, fillColor);
 		for (int i = 0; i < 4; i++) {
