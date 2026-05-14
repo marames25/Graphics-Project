@@ -112,23 +112,6 @@ void DrawCubicBezier(HDC hdc, Point P0, Point P1, Point P2, Point P3, COLORREF c
 	}
 }
 
-const int INSIDE = 0; // 0000
-const int LEFT = 1; // 0001
-const int RIGHT = 2; // 0010
-const int BOTTOM = 4; // 0100
-const int TOP = 8; // 1000
-int ComputeCode(Point p, int xmin, int ymin, int xmax, int ymax) {
-	int code = INSIDE;
-
-	if (p.x < xmin) code |= LEFT;
-	else if (p.x > xmax) code |= RIGHT;
-
-	if (p.y < ymin) code |= TOP;
-	else if (p.y > ymax) code |= BOTTOM;
-
-	return code;
-}
-
 //============== CIRCLE
 
 void CircleDirect(HDC hdc, Point center, int r, COLORREF c) {
