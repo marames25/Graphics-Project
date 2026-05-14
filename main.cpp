@@ -904,11 +904,11 @@ LRESULT CALLBACK WindowProcedure(HWND hwnd, UINT msg, WPARAM wp, LPARAM lp) {
 				return 0;
 			}
 
-			if (CurrentMode == FLOOD_FILL_NON_RECURSIVE) {
-				POINT center = {LOWORD(lp), HIWORD(lp)};
-				NonRecursiveFloodFill(hdc, center.x, center.y, RGB(69, 69, 69), RGB(255, 255, 255));
-				break;
-			}
+                if (CurrentMode == FLOOD_FILL_NON_RECURSIVE) {
+                    POINT center = { LOWORD(lp), HIWORD(lp) };
+                    NonRecursiveFloodFill(hdc, center.x, center.y, RGB(69, 69, 69), RGB(255, 255, 255));
+                    break;
+                }
 
 			if (CurrentMode == FILL_CIRCLE_LINES) {
 				if (step == WAIT_CENTER) {

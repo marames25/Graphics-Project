@@ -621,8 +621,8 @@ void NonRecursiveFloodFill(HDC hdc, int x, int y, COLORREF fillColor, COLORREF b
 		Point pnt = q.front();
 		q.pop();
 
-		COLORREF c = GetPixel(hdc, pnt.x, pnt.y);
-		if (c != bcColor || pnt.x >= w || pnt.y >= h) continue;
+        COLORREF c = GetPixel(hdc, pnt.x, pnt.y);
+        if (c == bcColor || c == fillColor || pnt.x >= w || pnt.y >= h) continue;
 
 		SetPixel(hdc, pnt.x, pnt.y, fillColor);
 		for (int i = 0; i < 4; i++) {
