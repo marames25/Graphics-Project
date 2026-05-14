@@ -1,5 +1,5 @@
-cmake_minimum_required(VERSION 3.27)
-project(GraphicsProject)
+cmake_minimum_required(VERSION 3.26)
+project(Project)
 
 set(CMAKE_CXX_STANDARD 17)
 

@@ -48,16 +48,30 @@ void ClearScreen(HWND hwnd)
 #define IDM_HAPPY 30
 #define IDM_SAD 31
 
+
+// Preferences
+#define IDM_BG_WHITE      80
+#define IDM_CURSOR_CROSS  81
+#define IDM_CURSOR_HAND   82
+#define IDM_COLOR_RED     83
+#define IDM_COLOR_GREEN   84
+#define IDM_COLOR_BLUE    85
+#define IDM_COLOR_BLACK   86
+#define IDM_COLOR_YELLOW  87
+
+// Clipping
+#define IDM_CLIP_SQ_POINT 90
+#define IDM_CLIP_SQ_LINE  91
+
 // Filling
+#define IDM_FILL_RECT_BEZIER  71
 #define IDM_FILL_CIRCLE_LINES 60
 #define IDM_FILL_CIRCLE_CIRCLES 61
 #define IDM_FILL_SQUARE_HERMITE 62
-#define IDM_FILL_RECT_BEZIER 63
 #define IDM_CONVEX_FILL 64
 #define IDM_NON_CONVEX_FILL 65
 #define IDM_FLOOD_FILL_RECURSIVE 66
 #define IDM_FLOOD_FILL_NON_RECURSIVE 67
-
 // ================= MENU CREATION =================
 void AddMenus(HWND hwnd)
 {
@@ -90,7 +104,21 @@ void AddMenus(HWND hwnd)
     AppendMenu(hFace, MF_STRING, IDM_HAPPY, "Sad Face");
     AppendMenu(hFace, MF_STRING, IDM_SAD, "Happy Face");
 
+    HMENU hPrefs = CreateMenu();
+    AppendMenu(hPrefs, MF_STRING, IDM_BG_WHITE,     "White Background");
+    AppendMenu(hPrefs, MF_SEPARATOR, 0, NULL);
+    AppendMenu(hPrefs, MF_STRING, IDM_CURSOR_CROSS, "Cursor: Crosshair");
+    AppendMenu(hPrefs, MF_STRING, IDM_CURSOR_HAND,  "Cursor: Hand");
+    AppendMenu(hPrefs, MF_SEPARATOR, 0, NULL);
+    AppendMenu(hPrefs, MF_STRING, IDM_COLOR_RED,    "Color: Red");
+    AppendMenu(hPrefs, MF_STRING, IDM_COLOR_GREEN,  "Color: Green");
+    AppendMenu(hPrefs, MF_STRING, IDM_COLOR_BLUE,   "Color: Blue");
+    AppendMenu(hPrefs, MF_STRING, IDM_COLOR_BLACK,  "Color: Black");
+    AppendMenu(hPrefs, MF_STRING, IDM_COLOR_YELLOW, "Color: Yellow");
+
+
     AppendMenu(menu, MF_POPUP, (UINT_PTR)hFile, "File");
+    AppendMenu(menu, MF_POPUP, (UINT_PTR)hPrefs, "Preferences");
     AppendMenu(menu, MF_POPUP, (UINT_PTR)hLines, "Lines");
     AppendMenu(menu, MF_POPUP, (UINT_PTR)hCircle, "Circles");
     AppendMenu(menu, MF_POPUP, (UINT_PTR)hFace, "Faces");
@@ -102,6 +130,7 @@ void AddMenus(HWND hwnd)
     AppendMenu(hFill, MF_STRING, IDM_FILL_SQUARE_HERMITE, "Fill Square (Hermite)");
     AppendMenu(hFill, MF_STRING, IDM_FLOOD_FILL_RECURSIVE, "Flood Fill Recursive");
     AppendMenu(hFill, MF_STRING, IDM_FLOOD_FILL_NON_RECURSIVE, "Flood Fill Non Recursive");
+    AppendMenu(hFill, MF_STRING, IDM_FILL_RECT_BEZIER, "Fill Rect Bezier (H)");
     AppendMenu(menu, MF_POPUP, (UINT_PTR)hFill, "Filling");
     SetMenu(hwnd, menu);
 
@@ -409,6 +438,56 @@ LRESULT CALLBACK WindowProcedure(HWND hwnd, UINT msg, WPARAM wp, LPARAM lp)
                     ClearScreen(hwnd);
                     break;
 
+                case IDM_BG_WHITE:
+                {
+                    HDC hdcWin = GetDC(hwnd);
+                    RECT rect;
+                    GetClientRect(hwnd, &rect);
+                    int w = rect.right, h = rect.bottom;
+
+                    HDC hdcMem = CreateCompatibleDC(hdcWin);
+                    HBITMAP hBmp = CreateCompatibleBitmap(hdcWin, w, h);
+                    SelectObject(hdcMem, hBmp);
+                    BitBlt(hdcMem, 0, 0, w, h, hdcWin, 0, 0, SRCCOPY);
+
+                    HBRUSH white = CreateSolidBrush(RGB(255, 255, 255));
+                    FillRect(hdcWin, &rect, white);
+                    DeleteObject(white);
+
+                    COLORREF bgColor = GetPixel(hdcMem, 0, h-1);
+                    for(int x = 0; x < w; x++)
+                        for(int y = 0; y < h; y++)
+                        {
+                            COLORREF px = GetPixel(hdcMem, x, y);
+                            if(px != bgColor)
+                                SetPixel(hdcWin, x, y, px);
+                        }
+
+                    SetClassLongPtr(hwnd, GCLP_HBRBACKGROUND,
+                                    (LONG_PTR)GetStockObject(WHITE_BRUSH));
+
+                    DeleteObject(hBmp);
+                    DeleteDC(hdcMem);
+                    ReleaseDC(hwnd, hdcWin);
+                    break;
+                }
+
+                case IDM_CURSOR_CROSS:
+                SetClassLongPtr(hwnd, GCLP_HCURSOR,
+                (LONG_PTR)LoadCursor(NULL, IDC_CROSS));
+                break;
+
+                case IDM_CURSOR_HAND:
+                SetClassLongPtr(hwnd, GCLP_HCURSOR,
+                (LONG_PTR)LoadCursor(NULL, IDC_HAND));
+                break;
+
+                case IDM_COLOR_RED:    CurrentColor = RGB(255, 0,   0);   break;
+                case IDM_COLOR_GREEN:  CurrentColor = RGB(0,   200, 0);   break;
+                case IDM_COLOR_BLUE:   CurrentColor = RGB(0,   0,   255); break;
+                case IDM_COLOR_BLACK:  CurrentColor = RGB(0,   0,   0);   break;
+                case IDM_COLOR_YELLOW: CurrentColor = RGB(255, 255, 0);   break;
+
                 case IDM_DDA:
                     CurrentMode = LINE_DDA;
                     break;
@@ -455,6 +534,20 @@ LRESULT CALLBACK WindowProcedure(HWND hwnd, UINT msg, WPARAM wp, LPARAM lp)
 
                 case IDM_CARDINAL:
                     CurrentMode = CARDINAL_SPLINE;
+                    TempPoints.clear();
+                    break;
+                case IDM_FILL_RECT_BEZIER:
+                    CurrentMode = FILL_RECT_BEZIER;
+                    TempPoints.clear();
+                    break;
+
+                case IDM_CLIP_SQ_POINT:
+                    CurrentMode = CLIP_SQUARE_POINT;
+                    TempPoints.clear();
+                    break;
+
+                case IDM_CLIP_SQ_LINE:
+                    CurrentMode = CLIP_SQUARE_LINE;
                     TempPoints.clear();
                     break;
 
@@ -749,6 +842,9 @@ LRESULT CALLBACK WindowProcedure(HWND hwnd, UINT msg, WPARAM wp, LPARAM lp)
                             DrawFace(hdc, p1, sqrt(dx*dx + dy*dy), SAD, CurrentColor);
                             break;
 
+                        case FILL_RECT_BEZIER:
+                            FillRectangleBezier(hdc, p1, p2, CurrentColor);
+                            break;
 
                         case FILL_SQUARE_HERMITE:
                         {
@@ -790,7 +886,7 @@ int WINAPI WinMain(HINSTANCE hInst, HINSTANCE, LPSTR, int nCmdShow)
     wc.lpfnWndProc = WindowProcedure;
     wc.hInstance = hInst;
     wc.lpszClassName = "DrawingApp";
-    wc.hbrBackground = (HBRUSH)(COLOR_WINDOW + 1);
+    wc.hbrBackground = CreateSolidBrush(RGB(211, 211, 211));
 
     RegisterClass(&wc);
 
