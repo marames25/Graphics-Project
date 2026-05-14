@@ -438,14 +438,36 @@ LRESULT CALLBACK WindowProcedure(HWND hwnd, UINT msg, WPARAM wp, LPARAM lp)
 
                 case IDM_BG_WHITE:
                 {
-                RECT rect;
-                GetClientRect(hwnd, &rect);
-                HDC hdc2 = GetDC(hwnd);
-                HBRUSH whiteBrush = CreateSolidBrush(RGB(255, 255, 255));
-                FillRect(hdc2, &rect, whiteBrush);
-                DeleteObject(whiteBrush);
-                ReleaseDC(hwnd, hdc2);
-                break;
+                    HDC hdcWin = GetDC(hwnd);
+                    RECT rect;
+                    GetClientRect(hwnd, &rect);
+                    int w = rect.right, h = rect.bottom;
+
+                    HDC hdcMem = CreateCompatibleDC(hdcWin);
+                    HBITMAP hBmp = CreateCompatibleBitmap(hdcWin, w, h);
+                    SelectObject(hdcMem, hBmp);
+                    BitBlt(hdcMem, 0, 0, w, h, hdcWin, 0, 0, SRCCOPY);
+
+                    HBRUSH white = CreateSolidBrush(RGB(255, 255, 255));
+                    FillRect(hdcWin, &rect, white);
+                    DeleteObject(white);
+
+                    COLORREF bgColor = GetPixel(hdcMem, 0, h-1);
+                    for(int x = 0; x < w; x++)
+                        for(int y = 0; y < h; y++)
+                        {
+                            COLORREF px = GetPixel(hdcMem, x, y);
+                            if(px != bgColor)
+                                SetPixel(hdcWin, x, y, px);
+                        }
+
+                    SetClassLongPtr(hwnd, GCLP_HBRBACKGROUND,
+                                    (LONG_PTR)GetStockObject(WHITE_BRUSH));
+
+                    DeleteObject(hBmp);
+                    DeleteDC(hdcMem);
+                    ReleaseDC(hwnd, hdcWin);
+                    break;
                 }
 
                 case IDM_CURSOR_CROSS:
