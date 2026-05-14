@@ -65,7 +65,7 @@ void ConvexFill(HDC hdc, vector<Point> polygon, COLORREF c);
 void NonConvexFill(HDC hdc, vector<Point> polygon, COLORREF c);
 
 
-void NonRecursiveFloodFill(HDC hdc, int x, int y, COLORREF fillColor, COLORREF boundaryColor);
+void NonRecursiveFloodFill(HDC hdc, int x, int y, COLORREF fillColor, COLORREF bcColor);
 
 // ================= CLIPPING =================
 
