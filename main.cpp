@@ -12,6 +12,7 @@ using namespace std;
 Mode CurrentMode = NONE;
 COLORREF CurrentColor = RGB(255, 0, 0);
 vector<Point> TempPoints;
+COLORREF BackgroundColor;
 
 // ================= HELPERS =================
 void ClearScreen(HWND hwnd)
@@ -658,8 +659,9 @@ LRESULT CALLBACK WindowProcedure(HWND hwnd, UINT msg, WPARAM wp, LPARAM lp)
                 }
 
                 if (CurrentMode == FLOOD_FILL_NON_RECURSIVE) {
+
                     POINT center = { LOWORD(lp), HIWORD(lp) };
-                    NonRecursiveFloodFill(hdc, center.x, center.y, RGB(69, 69, 69), RGB(255, 255, 255));
+                    NonRecursiveFloodFill(hdc, center.x, center.y, RGB(69, 69, 69), CurrentColor);
                     break;
                 }
 
