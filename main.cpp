@@ -830,7 +830,7 @@ int WINAPI WinMain(HINSTANCE hInst, HINSTANCE, LPSTR, int nCmdShow)
     wc.lpfnWndProc = WindowProcedure;
     wc.hInstance = hInst;
     wc.lpszClassName = "DrawingApp";
-    wc.hbrBackground = (HBRUSH)(COLOR_WINDOW + 1);
+    wc.hbrBackground = CreateSolidBrush(RGB(211, 211, 211));
 
     RegisterClass(&wc);
 
