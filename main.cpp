@@ -615,7 +615,7 @@ LRESULT CALLBACK WindowProcedure(HWND hwnd, UINT msg, WPARAM wp, LPARAM lp) {
 				}
 
 				case IDM_SAVE: {
-					char filename[MAX_PATH];
+					char filename[MAX_PATH] = "";
 
 					OPENFILENAME ofn;
 					ZeroMemory(&ofn, sizeof(ofn));
@@ -640,7 +640,7 @@ LRESULT CALLBACK WindowProcedure(HWND hwnd, UINT msg, WPARAM wp, LPARAM lp) {
 				}
 
 				case IDM_LOAD: {
-					char filename[MAX_PATH];
+					char filename[MAX_PATH] = "";
 
 					OPENFILENAME ofn;
 					ZeroMemory(&ofn, sizeof(ofn));
